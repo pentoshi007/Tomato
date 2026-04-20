@@ -25,7 +25,7 @@ export const loginUser = TryCatch(async (req, res) => {
     if (!user) {
         user = await User.create({ email, name, image: picture });
     }
-    const token = jwt.sign({ user: user._id }, process.env.JWT_SECRET as string, { expiresIn: "15d" });
+    const token = jwt.sign({ user: user._id, role: user.role }, process.env.JWT_SECRET as string, { expiresIn: "15d" });
     res.status(200).json({ user, message: "User logged in successfully", token });
 });
 // The following defines which user roles are permitted in the system.
@@ -54,7 +54,7 @@ export const addUserRole=TryCatch(async (req: AuthenticatedRequest, res: Respons
     res.status(401).json({ message: "Unauthorized, user not found" });
     return;
    }
-   const token = jwt.sign({ user: user._id }, process.env.JWT_SECRET as string, { expiresIn: "15d" });
+   const token = jwt.sign({ user: user._id, role: user.role }, process.env.JWT_SECRET as string, { expiresIn: "15d" });
    res.status(200).json({ user, message: "User role updated successfully", token });
    req.user = user;
    next();
@@ -66,7 +66,9 @@ export const myProfile=TryCatch(async (req: AuthenticatedRequest, res: Response,
         res.status(401).json({ message: "Unauthorized, no user found" });
         return;
     }
-    res.status(200).json({ user: req.user });
+    const token = req.headers.authorization?.split(" ")[1];
+    const decoded = jwt.decode(token!) as { restaurantId?: string } | null;
+    res.status(200).json({ user: { ...req.user.toObject(), restaurantId: decoded?.restaurantId } });
     next();
 })
 

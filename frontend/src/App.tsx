@@ -7,11 +7,17 @@ import PublicRoute from "./components/publicRoute";
 import SelectRole from "./pages/SelectRole";
 import Navbar from "./components/Navbar";
 import Account from "./pages/Account";
-
+import { Restaurant } from "./pages/Restaurant";
+import { useAppContext } from "./context/AppContext";
 export const AuthService = "http://localhost:3000";
+export const restaurantService = "http://localhost:3001";
 
 
 const App = () => {
+  const {user} = useAppContext();
+  if(user?.role === "seller") {
+    return <><Restaurant /><Toaster /></>;
+  }
   return <>
     <BrowserRouter>
       <Navbar />
