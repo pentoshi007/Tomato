@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import cors from "cors";
 import restaurantRoutes from "./routes/restaurant.js";
+import itemRoutes from "./routes/menuitem.js";
 dotenv.config();
 
 const app = express();
@@ -10,6 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/restaurant", restaurantRoutes);
+app.use("/api/item", itemRoutes);
 
 async function startServer() {
   try {

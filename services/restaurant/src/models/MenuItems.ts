@@ -17,7 +17,7 @@ const menuSchema = new Schema<IMenuItems>(
     description: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     image: { type: String, required: false },
-    isAvailable: { type: Boolean, required: true, default: true },
+    isAvailable: { type: Boolean, default: true },
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

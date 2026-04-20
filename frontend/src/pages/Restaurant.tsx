@@ -5,6 +5,9 @@ import { restaurantService } from "../App";
 import { toast } from "react-hot-toast";
 import AddRestaurant from "./AddRestaurant";
 import RestaurantProfile from "../components/RestaurantProfile";
+import MenuItems from "../components/MenuItems";
+import AddMenuItem from "../components/AddMenuItem";
+import type { IMenuItem } from "../types";
 
 export const Restaurant = () => {
   const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
@@ -36,6 +39,34 @@ export const Restaurant = () => {
   useEffect(() => {
     fetchMyRestaurant();
   }, []);
+
+  const [menuItems, setMenuItems] = useState<IMenuItem[]>([]);
+
+  const fetchMenuItems = async (restaurantId: string) => {
+    try {
+      const { data } = await axios.get(
+        `${restaurantService}/api/item/all/${restaurantId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+      setMenuItems(data.items);
+    } catch (error) {
+      console.log(error);
+      toast.error("Problem in fetching menu items");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (restaurant && restaurant._id) {
+      fetchMenuItems(restaurant._id);
+    }
+  }, [restaurant]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -57,7 +88,7 @@ export const Restaurant = () => {
         <div className="flex border-b justify-around">
           {[
             { key: "menu", label: "Menu Items" },
-            { key: "add-item", label: "Add Item" },
+            { key: "add-items", label: "Add Item" },
             { key: "sales", label: "Sales" },
           ].map((t) => (
             <button
@@ -75,11 +106,16 @@ export const Restaurant = () => {
         </div>
         <div className="p-5 text-center">
           {tabs === "menu" && (
-            <p className="text-gray-500">No menu items found</p>
+            <MenuItems
+              items={menuItems}
+              onItemDeleted={() => fetchMenuItems(restaurant._id)}
+              isSeller={true}
+            />
           )}
           {tabs === "add-items" && (
-            <p className="text-gray-500">No items to add</p>
+            <AddMenuItem onItemAdded={() => fetchMenuItems(restaurant._id)} />
           )}
+
           {tabs === "sales" && <p className="text-gray-500">No sales found</p>}
         </div>
       </div>
