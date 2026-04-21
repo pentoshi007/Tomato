@@ -4,7 +4,7 @@ import Restaurant from "../models/Restaurant.js";
 import getBuffer from "../config/datauri.js";
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { Response } from "express";
+import { Request, Response } from "express";
 
 export const addRestaurant = TryCatch(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -119,7 +119,7 @@ export const updateRestaurantStatus = TryCatch(
     const restaurant = await Restaurant.findOneAndUpdate(
       { ownerId: user._id },
       { isOpen: status },
-      { returnDocument: 'after' },
+      { returnDocument: "after" },
     );
     if (!restaurant) {
       res
@@ -150,7 +150,7 @@ export const updateRestaurant = TryCatch(
     const restaurant = await Restaurant.findOneAndUpdate(
       { ownerId: user._id },
       { name, description },
-      { returnDocument: 'after' },
+      { returnDocument: "after" },
     );
     if (!restaurant) {
       res
@@ -161,5 +161,65 @@ export const updateRestaurant = TryCatch(
     return res
       .status(200)
       .json({ message: "Restaurant updated successfully", restaurant });
+  },
+);
+
+export const getNearbyRestaurants = TryCatch(
+  async (req: Request, res: Response) => {
+    const { latitude, longitude, radius = 5000, search = "" } = req.query;
+    if (!latitude || !longitude) {
+      res.status(400).json({ message: "Latitude and longitude are required" });
+      return;
+    }
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const radiusInMeters = Number(radius);
+    if (
+      Number.isNaN(lat) ||
+      Number.isNaN(lng) ||
+      Number.isNaN(radiusInMeters)
+    ) {
+      res.status(400).json({ message: "Invalid latitude or longitude" });
+      return;
+    }
+    const query: any = {
+      isVerified: true,
+    };
+    if (search && typeof search === "string") {
+      query.name = { $regex: search, $options: "i" };
+    }
+    query.autoLocation = {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+        $maxDistance: radiusInMeters > 0 ? radiusInMeters : 5000,
+      },
+    };
+
+    const restaurants = await Restaurant.find(query).sort({ isOpen: -1 });
+
+    res.status(200).json({
+      success: true,
+      restaurants,
+      count: restaurants.length,
+    });
+  },
+);
+
+export const fetchSingleRestaurant = TryCatch(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ message: "Restaurant ID is required" });
+      return;
+    }
+    const restaurant = await Restaurant.findById(id);
+    if (!restaurant) {
+      res.status(404).json({ message: "Restaurant not found" });
+      return;
+    }
+    return res.status(200).json({ success: true, restaurant });
   },
 );

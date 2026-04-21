@@ -30,8 +30,12 @@ export const Restaurant = () => {
         localStorage.setItem("token", data.token);
       }
     } catch (error) {
-      console.log(error);
-      toast.error("Problem in fetching restaurant");
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        setRestaurant(null);
+      } else {
+        console.log(error);
+        toast.error("Problem in fetching restaurant");
+      }
     } finally {
       setLoading(false);
     }

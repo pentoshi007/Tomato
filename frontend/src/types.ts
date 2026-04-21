@@ -10,19 +10,6 @@ export interface Location {
   longitude: number;
   formattedAddress: string;
 }
-export interface AppContextType {
-  user: User | null;
-  loading: boolean;
-  isAuth: boolean;
-
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  setIsAuth: React.Dispatch<React.SetStateAction<boolean>>;
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
-
-  location: Location | null;
-  loadingLocation: boolean;
-  city: string | null;
-}
 export interface IRestaurant {
   _id: string;
   name: string;
@@ -54,3 +41,31 @@ export interface IMenuItem {
   updatedAt: Date;
 }
 export type SellerTabs = "menu" | "add-items" | "sales";
+
+export interface ICart {
+  userId: string;
+  restaurantId: string | IRestaurant;
+  itemId: string | IMenuItem;
+  quantity: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AppContextType {
+  user: User | null;
+  loading: boolean;
+  isAuth: boolean;
+
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setIsAuth: React.Dispatch<React.SetStateAction<boolean>>;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+
+  location: Location | null;
+  loadingLocation: boolean;
+  city: string | null;
+
+  cart: ICart[];
+  subTotal: number;
+  quantity: number;
+  fetchMyCart: () => Promise<void>;
+}

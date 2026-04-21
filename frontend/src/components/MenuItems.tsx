@@ -1,16 +1,22 @@
-import { BiEdit, BiToggleLeft, BiToggleRight } from "react-icons/bi";
+import { BiEdit, BiToggleLeft, BiToggleRight, BiCartAdd } from "react-icons/bi";
 import type { IMenuItem } from "../types";
 import { toast } from "react-hot-toast";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { restaurantService } from "../App";
 
 interface MenuItemsProps {
   items: IMenuItem[];
   onItemDeleted: () => void;
   isSeller: boolean;
+  onItemClick?: (item: IMenuItem) => void;
 }
 
-const MenuItems = ({ items, isSeller, onItemDeleted }: MenuItemsProps) => {
+const MenuItems = ({
+  items,
+  isSeller,
+  onItemDeleted,
+  onItemClick,
+}: MenuItemsProps) => {
   if (!items || items.length === 0) {
     return <p className="text-gray-500 py-6 text-center">No menu items yet.</p>;
   }
@@ -32,15 +38,39 @@ const MenuItems = ({ items, isSeller, onItemDeleted }: MenuItemsProps) => {
       toast.error("Problem in deleting menu item");
     }
   };
+  const toggleAvailability = async (itemId: string) => {
+    try {
+      const { data } = await axios.put(
+        `${restaurantService}/api/item/status/${itemId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+      toast.success(data.message);
+      onItemDeleted();
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        toast.error(error.response?.data.message);
+      } else {
+        toast.error("An unknown error occurred");
+      }
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((item) => (
         <div
           key={item._id}
-          className={`flex gap-4 rounded-xl bg-white p-4 shadow-sm border border-gray-100 ${
-            !item.isAvailable ? "opacity-70" : ""
-          }`}
+          onClick={() => !isSeller && onItemClick?.(item)}
+          className={`flex gap-4 rounded-xl p-4 shadow-sm border ${
+            !item.isAvailable
+              ? "bg-gray-50 border-gray-200 opacity-80"
+              : "bg-white border-gray-100"
+          } ${!isSeller ? "cursor-pointer hover:shadow-md transition" : ""}`}
         >
           <div className="relative shrink-0 w-20 h-20">
             {item.image ? (
@@ -54,6 +84,13 @@ const MenuItems = ({ items, isSeller, onItemDeleted }: MenuItemsProps) => {
             ) : (
               <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
                 No Image
+              </div>
+            )}
+            {!item.isAvailable && (
+              <div className="absolute inset-0 rounded-lg bg-black/35 flex items-center justify-center">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-white px-2 py-1 rounded bg-black/50">
+                  Not Available
+                </span>
               </div>
             )}
           </div>
@@ -73,13 +110,14 @@ const MenuItems = ({ items, isSeller, onItemDeleted }: MenuItemsProps) => {
               )}
             </div>
             <p className="text-xs text-gray-500 line-clamp-2">
-              {item.description}
+              {item.description || "No description"}
             </p>
             <p className="text-[#E23774] font-semibold mt-1">₹{item.price}</p>
 
             {isSeller && (
               <div className="mt-3 flex items-center justify-between border-t pt-2">
                 <button
+                  onClick={() => toggleAvailability(item._id)}
                   title="Toggle availability"
                   className="flex items-center gap-1 text-xs text-gray-600 hover:text-[#E23774]"
                 >
@@ -100,17 +138,21 @@ const MenuItems = ({ items, isSeller, onItemDeleted }: MenuItemsProps) => {
             )}
           </div>
           {!isSeller && (
-            <button
-              onClick={() => {}}
-              disabled={!item.isAvailable}
-              className={`flex items-center justify-center rounded-lg p-2 ${
-                !item.isAvailable
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-red-500 hover:text-red-700"
-              }`}
-            >
-              Add
-            </button>
+            <div className="flex items-center shrink-0">
+              <button
+                onClick={(e) => e.stopPropagation()}
+                disabled={!item.isAvailable}
+                title="Add to cart"
+                className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  !item.isAvailable
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-[#E23774] text-white hover:bg-[#c92e64]"
+                }`}
+              >
+                <BiCartAdd size={18} />
+                <span>Add</span>
+              </button>
+            </div>
           )}
         </div>
       ))}
