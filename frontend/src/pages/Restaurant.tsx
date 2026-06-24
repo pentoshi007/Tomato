@@ -2,14 +2,17 @@ import axios from "axios";
 import type { IRestaurant, SellerTabs } from "../types";
 import { useState, useEffect } from "react";
 import { restaurantService } from "../App";
+import { useSocket } from "../context/useSocket";
 import { toast } from "react-hot-toast";
 import AddRestaurant from "./AddRestaurant";
 import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import AddMenuItem from "../components/AddMenuItem";
 import type { IMenuItem } from "../types";
+import RestaurantOrders from "../components/RestaurantOrders.tsx";
 
 export const Restaurant = () => {
+  const { reconnect } = useSocket();
   const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
   const [loading, setLoading] = useState(false);
   const [tabs, setTabs] = useState<SellerTabs>("menu");
@@ -28,6 +31,9 @@ export const Restaurant = () => {
       setLoading(false);
       if (data.token) {
         localStorage.setItem("token", data.token);
+        // New token now contains restaurantId — reconnect socket so the seller
+        // joins the correct restaurant room for real-time order notifications.
+        reconnect();
       }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -88,6 +94,7 @@ export const Restaurant = () => {
         isSeller={true}
         onUpdate={setRestaurant}
       />
+      <RestaurantOrders restaurantId={restaurant._id} />
       <div className="rounded-xl bg-white shadow-sm">
         <div className="flex border-b justify-around">
           {[

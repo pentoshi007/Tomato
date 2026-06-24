@@ -5,9 +5,10 @@ interface Props {
   item: IMenuItem;
   onClose: () => void;
   onAddToCart?: (item: IMenuItem) => void;
+  addingToCart?: boolean;
 }
 
-const MenuItemModal = ({ item, onClose, onAddToCart }: Props) => {
+const MenuItemModal = ({ item, onClose, onAddToCart, addingToCart }: Props) => {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -63,15 +64,15 @@ const MenuItemModal = ({ item, onClose, onAddToCart }: Props) => {
             </span>
             <button
               onClick={() => onAddToCart?.(item)}
-              disabled={!item.isAvailable}
+              disabled={!item.isAvailable || addingToCart}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                !item.isAvailable
+                !item.isAvailable || addingToCart
                   ? "cursor-not-allowed bg-gray-100 text-gray-400"
                   : "bg-[#E23774] text-white hover:bg-[#c92e64]"
               }`}
             >
               <BiCartAdd size={20} />
-              Add to cart
+              {addingToCart ? "Adding..." : "Add to cart"}
             </button>
           </div>
         </div>

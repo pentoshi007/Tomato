@@ -40,6 +40,57 @@ export interface IMenuItem {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export type OrderStatus =
+  | "placed"
+  | "accepted"
+  | "preparing"
+  | "ready_for_rider"
+  | "rider_assigned"
+  | "picked_up"
+  | "delivered"
+  | "cancelled";
+
+export type PaymentMethod = "razorpay" | "stripe";
+export type PaymentStatus = "pending" | "paid" | "failed";
+
+export interface IOrderItem {
+  itemId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface IOrder {
+  _id: string;
+  userId: string;
+  restaurantId: string;
+  restaurantName: string;
+  riderId: string | null;
+  riderPhone: number | null;
+  riderName: string | null;
+  distance: number;
+  riderAmount: number;
+  items: IOrderItem[];
+  subTotal: number;
+  deliveryFee: number;
+  platformFee: number;
+  totalAmount: number;
+  addressId: string;
+  deliveryAddress: {
+    formattedAddress: string;
+    mobile: number;
+    latitude: number;
+    longitude: number;
+  };
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentId: string | null;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
 export type SellerTabs = "menu" | "add-items" | "sales";
 
 export interface ICart {
@@ -68,4 +119,16 @@ export interface AppContextType {
   subTotal: number;
   quantity: number;
   fetchMyCart: () => Promise<void>;
+}
+export interface IAddress {
+  _id: string;
+  userId: string;
+  formattedAddress: string;
+  mobile: number;
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }

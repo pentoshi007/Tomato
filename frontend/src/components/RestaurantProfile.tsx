@@ -3,7 +3,7 @@ import type { IRestaurant } from "../types";
 import { useState } from "react";
 import { restaurantService } from "../App";
 import toast from "react-hot-toast";
-import { BiMapPin, BiEdit, BiSave, BiToggleRight } from "react-icons/bi";
+import { BiMapPin, BiEdit } from "react-icons/bi";
 
 interface props {
   restaurant: IRestaurant;

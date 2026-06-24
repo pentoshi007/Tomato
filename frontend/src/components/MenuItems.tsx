@@ -3,6 +3,8 @@ import type { IMenuItem } from "../types";
 import { toast } from "react-hot-toast";
 import axios, { AxiosError } from "axios";
 import { restaurantService } from "../App";
+import { useAppContext } from "../context/AppContext";
+import { useState } from "react";
 
 interface MenuItemsProps {
   items: IMenuItem[];
@@ -17,6 +19,8 @@ const MenuItems = ({
   onItemDeleted,
   onItemClick,
 }: MenuItemsProps) => {
+  const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
+  const { fetchMyCart } = useAppContext();
   if (!items || items.length === 0) {
     return <p className="text-gray-500 py-6 text-center">No menu items yet.</p>;
   }
@@ -59,7 +63,30 @@ const MenuItems = ({
       }
     }
   };
-
+  const addToCart = async (restaurantId: string, itemId: string) => {
+    try {
+      setLoadingItemId(itemId);
+      await axios.post(
+        `${restaurantService}/api/cart/add`,
+        {
+          restaurantId,
+          itemId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+      toast.success("Item added to cart successfully");
+      fetchMyCart();
+    } catch (error) {
+      console.log(error);
+      toast.error("Problem in adding to cart");
+    } finally {
+      setLoadingItemId(null);
+    }
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((item) => (
@@ -140,14 +167,17 @@ const MenuItems = ({
           {!isSeller && (
             <div className="flex items-center shrink-0">
               <button
-                onClick={(e) => e.stopPropagation()}
-                disabled={!item.isAvailable}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addToCart(item.restaurantId, item._id);
+                }}
+                disabled={!item.isAvailable || loadingItemId === item._id}
                 title="Add to cart"
                 className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
                   !item.isAvailable
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-[#E23774] text-white hover:bg-[#c92e64]"
-                }`}
+                } ${loadingItemId === item._id ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <BiCartAdd size={18} />
                 <span>Add</span>

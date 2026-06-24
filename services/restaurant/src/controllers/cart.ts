@@ -61,7 +61,7 @@ export const addToCart = TryCatch(
         $inc: { quantity: 1 },
         $setOnInsert: { userId, restaurantId, itemId },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
     );
 
     res.status(200).json({
@@ -98,5 +98,77 @@ export const fetchMyCart = TryCatch(
       totalPrice,
       cartLength,
     });
+  },
+);
+
+export const incrementCartItem = TryCatch(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?._id;
+
+    const { itemId } = req.body as {
+      itemId: string;
+    };
+    if (!userId || !itemId) {
+      res.status(400).json({ message: "Invalid user ID or item ID" });
+      return;
+    }
+    const cartItem = await CartModel.findOneAndUpdate(
+      { userId, itemId },
+      { $inc: { quantity: 1 } },
+      { returnDocument: "after" },
+    );
+    if (!cartItem) {
+      res.status(404).json({ message: "Item not found in cart" });
+      return;
+    }
+    res.status(200).json({
+      message: "Item quantity incremented successfully",
+      cart: cartItem,
+    });
+  },
+);
+
+export const decrementCartItem = TryCatch(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?._id;
+
+    const { itemId } = req.body as {
+      itemId: string;
+    };
+    if (!userId || !itemId) {
+      res.status(400).json({ message: "Invalid user ID or item ID" });
+      return;
+    }
+    const cartItem = await CartModel.findOne({ userId, itemId });
+    if (!cartItem) {
+      res.status(404).json({ message: "Item not found in cart" });
+      return;
+    }
+    if (cartItem.quantity === 1) {
+      await CartModel.deleteOne({ userId, itemId });
+      res.status(200).json({
+        message: "Item removed from cart",
+        cart: cartItem,
+      });
+      return;
+    } else {
+      await CartModel.updateOne({ userId, itemId }, { $inc: { quantity: -1 } });
+      res.status(200).json({
+        message: "Item quantity decremented successfully",
+        cart: cartItem,
+      });
+    }
+  },
+);
+
+export const clearCart = TryCatch(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?._id;
+    if (!userId) {
+      res.status(400).json({ message: "Invalid user ID" });
+      return;
+    }
+    await CartModel.deleteMany({ userId });
+    res.status(200).json({ message: "Cart cleared successfully" });
   },
 );

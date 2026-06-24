@@ -32,7 +32,7 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
     formData.append("formattedAddress", location?.formattedAddress || "");
     try {
       setSubmitting(true);
-      const { data } = await axios.post(
+      await axios.post(
         `${restaurantService}/api/restaurant/new`,
         formData,
         {

@@ -11,18 +11,16 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 
-
 async function startServer() {
-    try {
-        await connectDB();
-        app.listen(process.env.PORT || 3000, () => {
-            console.log(`Server is running on port ${process.env.PORT || 3000}`);
-        });
-    } catch (error) {
-        console.log(error);
-        process.exit(1);
-    }
+  try {
+    await connectDB();
+    app.listen(process.env.PORT || 3000, () => {
+      console.log(`Auth Server is running on port ${process.env.PORT || 3000}`);
+    });
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
+  }
 }
-
 
 startServer();

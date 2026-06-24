@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import MenuItemModal from "../components/MenuItemModal";
+import { useAppContext } from "../context/AppContext";
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -14,10 +15,12 @@ const authHeaders = () => ({
 
 const RestaurantPage = () => {
   const { id } = useParams();
+  const { fetchMyCart } = useAppContext();
   const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
   const [menuItems, setMenuItems] = useState<IMenuItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<IMenuItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -43,6 +46,26 @@ const RestaurantPage = () => {
     })();
   }, [id]);
 
+  const handleAddToCart = async (item: IMenuItem) => {
+    if (!id) return;
+    try {
+      setAddingToCart(true);
+      await axios.post(
+        `${restaurantService}/api/cart/add`,
+        { restaurantId: id, itemId: item._id },
+        { headers: authHeaders() },
+      );
+      toast.success("Item added to cart successfully");
+      fetchMyCart();
+      setSelectedItem(null);
+    } catch (error) {
+      console.log(error);
+      toast.error("Problem in adding to cart");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   if (loading) return <div className="p-4">Loading restaurant ...</div>;
   if (!restaurant) return <div className="p-4">Restaurant not found.</div>;
 
@@ -66,6 +89,8 @@ const RestaurantPage = () => {
         <MenuItemModal
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
+          onAddToCart={handleAddToCart}
+          addingToCart={addingToCart}
         />
       )}
     </div>

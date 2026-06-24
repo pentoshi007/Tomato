@@ -48,39 +48,49 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      return alert("Please enable location services to continue");
+      toast.error("Please enable location services to continue");
+      return;
     }
     setLoadingLocation(true);
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
-        );
-        const data = await res.json();
-        setLocation({
-          latitude,
-          longitude,
-          formattedAddress: data.display_name || "Unknown Location",
-        });
-        setCity(
-          data.address.city ||
-            data.address.town ||
-            data.address.village ||
-            "Unknown City",
-        );
-      } catch (error) {
-        setLocation({
-          latitude,
-          longitude,
-          formattedAddress: "Unknown Location",
-        });
-        setCity("Unknown City");
-        toast.error("Problem in getting location. Please try again." + error);
-      } finally {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en`,
+            {
+              headers: {
+                "User-Agent": "TomatoDeliveryApp/1.0 (local-dev)",
+              },
+            },
+          );
+          if (!res.ok) throw new Error(`Nominatim ${res.status}`);
+          const data = await res.json();
+          setLocation({
+            latitude,
+            longitude,
+            formattedAddress: data.display_name || "Unknown Location",
+          });
+          setCity(
+            data.address?.city ||
+              data.address?.town ||
+              data.address?.village ||
+              "Unknown City",
+          );
+        } catch (error) {
+          // Geocoding failed — still set coords so app remains functional
+          setLocation({ latitude, longitude, formattedAddress: "" });
+          setCity("Unknown City");
+          console.warn("AppContext geocoding failed:", error);
+        } finally {
+          setLoadingLocation(false);
+        }
+      },
+      () => {
+        // User denied permission — non-fatal
         setLoadingLocation(false);
-      }
-    });
+      },
+    );
   }, []);
 
   const fetchMyCart = async () => {
