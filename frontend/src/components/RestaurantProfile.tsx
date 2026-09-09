@@ -3,8 +3,9 @@ import type { IRestaurant } from "../types";
 import { useState } from "react";
 import { restaurantService } from "../config";
 import toast from "react-hot-toast";
-import { BiMapPin, BiEdit } from "react-icons/bi";
+import { BiMapPin, BiEdit, BiCheck, BiX, BiLogOut } from "react-icons/bi";
 import { useAppContext } from "../context/AppContext";
+import { FoodImage } from "./ui/FoodImage";
 
 interface props {
   restaurant: IRestaurant;
@@ -12,26 +13,29 @@ interface props {
   onUpdate: (restaurant: IRestaurant) => void;
 }
 
+const authHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
+
 const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState(restaurant.name);
   const [description, setDescription] = useState(restaurant.description || "");
   const [isOpen, setIsOpen] = useState(restaurant.isOpen);
   const [loading, setLoading] = useState(false);
+  const { setIsAuth, setUser } = useAppContext();
 
   const toggleOpenStatus = async () => {
     try {
       const { data } = await axios.put(
         `${restaurantService}/api/restaurant/status`,
         { status: !isOpen },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
+        { headers: authHeaders() },
       );
       setIsOpen(data.restaurant.isOpen);
-      toast.success("Restaurant status updated successfully");
+      toast.success(
+        data.restaurant.isOpen ? "You're open for orders" : "Marked as closed",
+      );
     } catch (error) {
       console.log(error);
       toast.error("Problem in updating restaurant status");
@@ -44,36 +48,26 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
       const { data } = await axios.put(
         `${restaurantService}/api/restaurant/edit`,
         { name, description },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
+        { headers: authHeaders() },
       );
-
-      toast.success("Restaurant updated successfully");
+      toast.success("Restaurant updated");
       onUpdate(data.restaurant);
+      setEditMode(false);
     } catch (error) {
       console.log(error);
       toast.error("Problem in updating restaurant");
     } finally {
-      setEditMode(false);
       setLoading(false);
     }
   };
-  const { setIsAuth, setUser } = useAppContext();
+
   const logoutHandler = async () => {
     try {
       await axios.put(
         `${restaurantService}/api/restaurant/status`,
         { status: false },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
+        { headers: authHeaders() },
       );
-
       localStorage.removeItem("token");
       setIsAuth(false);
       setUser(null);
@@ -81,97 +75,116 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
     } catch (error) {
       console.log(error);
       toast.error("Problem in logging out");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-xl rounded-xl bg-white shadow-sm overflow-hidden">
-      {restaurant.image && (
-        <img
+    <div className="card overflow-hidden">
+      <div className="relative h-44 border-b-2 border-ink sm:h-56">
+        <FoodImage
           src={restaurant.image}
           alt={restaurant.name}
-          className="w-full h-48 object-cover"
+          width={1200}
+          eager
+          className="h-full w-full object-cover"
         />
-      )}
-      <div className="p-5 space-y-4">
-        <div className="flex items-start justify-between">
-          <div>
+        <span
+          className={`sticker absolute top-4 left-4 ${
+            isOpen ? "bg-basil text-white" : "bg-ink text-cream"
+          }`}
+        >
+          {isOpen ? "Open" : "Closed"}
+        </span>
+      </div>
+
+      <div className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             {isSeller && editMode ? (
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-2 border-gray-400 px-4 py-2 text-sm outline-none focus:border-[#E23774] focus:ring-[#E23774] "
+                className="input !text-lg !font-bold"
+                aria-label="Restaurant name"
               />
             ) : (
-              <h2 className="text-xl font-semibold">{restaurant.name}</h2>
+              <h2 className="font-display truncate text-2xl font-extrabold tracking-tight">
+                {restaurant.name}
+              </h2>
             )}
-            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 ">
-              <BiMapPin className="h-4 w-4 text-[#E23774]" />
-              {restaurant.autoLocation.formattedAddress ||
-                "No location selected"}
-            </div>
+            <p className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-smoke">
+              <BiMapPin className="mt-0.5 h-4 w-4 shrink-0 text-tomato" />
+              <span className="line-clamp-2">
+                {restaurant.autoLocation.formattedAddress ||
+                  "No location selected"}
+              </span>
+            </p>
           </div>
-          {isSeller && (
+          {isSeller && !editMode && (
             <button
-              onClick={() => setEditMode(!editMode)}
-              className="text-sm text-gray-500 hover:text-[#E23774]"
+              onClick={() => setEditMode(true)}
+              className="btn-secondary !px-3 !py-1.5 !text-xs"
             >
-              <BiEdit size={18} color="#E23774" /> Edit
+              <BiEdit className="h-4 w-4" /> Edit
             </button>
           )}
         </div>
+
         {editMode ? (
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-lg border border-2 border-gray-400 px-4 py-2 text-sm outline-none focus:border-[#E23774] focus:ring-[#E23774] "
+            className="input min-h-20 resize-y"
+            aria-label="Description"
           />
         ) : (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm leading-relaxed font-medium text-smoke">
             {restaurant.description || "No description added"}
           </p>
         )}
-        <div className={`flex items-center justify-between pt-3 border-t `}>
-          <span
-            className={`text-sm font-medium ${isOpen ? "text-green-700" : "text-red-700"}`}
-          >
-            {isOpen ? "OPEN" : "CLOSED"}
-          </span>
-          <div className="flex items-center gap-2">
-            {editMode && (
-              <button
-                onClick={saveChanges}
-                disabled={loading}
-                className="text-sm text-gray-500 bg-[#E23774] text-white px-3 py-1 rounded"
-              >
-                Save
-              </button>
-            )}
-            {isSeller && (
-              <button
-                onClick={toggleOpenStatus}
-                disabled={loading}
-                className={`px-3 py-1 rounded text-sm font-medium text-white ${isOpen ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
-              >
-                {isOpen ? "Close Restaurant" : "Open Restaurant"}
-              </button>
-            )}
-            {isSeller && (
-              <button
-                onClick={logoutHandler}
-                disabled={loading}
-                className={`px-3 py-1 rounded text-sm font-medium text-white bg-[#E23774] hover:bg-[#E23774]`}
-              >
-                Logout
-              </button>
+
+        {isSeller && (
+          <div className="flex flex-wrap items-center gap-2 border-t-2 border-mist pt-4">
+            {editMode ? (
+              <>
+                <button
+                  onClick={saveChanges}
+                  disabled={loading}
+                  className="btn-primary !py-2 !text-xs"
+                >
+                  <BiCheck className="h-4 w-4" />
+                  {loading ? "Saving…" : "Save changes"}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditMode(false);
+                    setName(restaurant.name);
+                    setDescription(restaurant.description || "");
+                  }}
+                  className="btn-ghost !py-2 !text-xs"
+                >
+                  <BiX className="h-4 w-4" /> Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={toggleOpenStatus}
+                  disabled={loading}
+                  className={`${isOpen ? "btn-danger-ghost" : "btn-primary"} !py-2 !text-xs`}
+                >
+                  {isOpen ? "Close restaurant" : "Open restaurant"}
+                </button>
+                <button
+                  onClick={logoutHandler}
+                  className="btn-secondary !py-2 !text-xs"
+                >
+                  <BiLogOut className="h-4 w-4" /> Logout
+                </button>
+              </>
             )}
           </div>
-        </div>
-        <p className="text-xs text-gray-500">
-          Created at: {new Date(restaurant.createdAt).toLocaleDateString()}
-        </p>
+        )}
       </div>
     </div>
   );

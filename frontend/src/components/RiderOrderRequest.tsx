@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { riderService } from "../config";
 import { toast } from "react-hot-toast";
 import { BiSolidZap } from "react-icons/bi";
+import { Spinner } from "./ui/primitives";
+
 interface Props {
   orderId: string;
   onAccepted: () => void;
@@ -11,6 +13,7 @@ interface Props {
 const RiderOrderRequest = ({ orderId, onAccepted }: Props) => {
   const [accepting, setAccepting] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(10);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setSecondsLeft((prev) => {
@@ -37,7 +40,7 @@ const RiderOrderRequest = ({ orderId, onAccepted }: Props) => {
           },
         },
       );
-      toast.success("Order accepted successfully");
+      toast.success("Order accepted — get rolling");
       onAccepted();
     } catch (error) {
       const message = axios.isAxiosError(error)
@@ -50,42 +53,42 @@ const RiderOrderRequest = ({ orderId, onAccepted }: Props) => {
       setAccepting(false);
     }
   };
+
   const urgent = secondsLeft <= 3;
+
   return (
-    <div className="rounded-[28px] border border-[#f7d0dc] bg-white p-6 shadow-sm">
+    <div className="card animate-pop-in !bg-paper p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fff7fa] text-[#E23774] ring-1 ring-[#f7d0dc]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-mustard">
             <BiSolidZap className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+            <p className="text-[10px] font-black tracking-[0.2em] text-smoke uppercase">
               New delivery request
             </p>
-            <h3 className="mt-1 text-xl font-semibold text-gray-900">
+            <h3 className="font-display mt-0.5 text-lg font-extrabold">
               Order #{orderId.slice(-6)}
             </h3>
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-            urgent ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-          }`}
+          className={`chip shrink-0 ${urgent ? "bg-tomato text-white" : "bg-butter"}`}
         >
           {secondsLeft}s left
         </span>
       </div>
 
-      <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-gray-100">
+      <div className="mt-4 h-2.5 overflow-hidden rounded-full border-2 border-ink bg-paper">
         <div
-          className={`h-full rounded-full transition-all duration-1000 ease-linear ${
-            urgent ? "bg-red-500" : "bg-[#E23774]"
+          className={`h-full transition-all duration-1000 ease-linear ${
+            urgent ? "bg-tomato" : "bg-mustard"
           }`}
           style={{ width: `${secondsLeft * 10}%` }}
         />
       </div>
 
-      <p className="mt-3 text-sm text-gray-500">
+      <p className="mt-3 text-xs font-semibold text-smoke">
         Accept within {secondsLeft} seconds to claim this delivery.
       </p>
 
@@ -93,9 +96,14 @@ const RiderOrderRequest = ({ orderId, onAccepted }: Props) => {
         type="button"
         disabled={accepting}
         onClick={acceptOrder}
-        className="mt-5 w-full rounded-xl bg-[#E23774] py-3 text-sm font-semibold text-white transition hover:bg-[#d91f66] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary mt-4 w-full !py-2.5"
       >
-        {accepting ? "Accepting..." : "Accept Order"}
+        {accepting ? (
+          <Spinner size={16} className="text-white" />
+        ) : (
+          <BiSolidZap className="h-4 w-4" />
+        )}
+        {accepting ? "Accepting…" : "Accept order"}
       </button>
     </div>
   );

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { BiRefresh } from "react-icons/bi";
+import { BiRefresh, BiStore, BiCheck } from "react-icons/bi";
 import { adminService } from "../config";
 import type { IRider, IRestaurant } from "../types";
+import { Logo } from "../components/ui/Logo";
+import { Skeleton } from "../components/ui/primitives";
+import { Scooter } from "../components/ui/illustrations";
 
 type ReviewTarget = "restaurant" | "rider";
 
@@ -59,45 +62,54 @@ const maskDocument = (value?: string): string => {
   return `${"•".repeat(Math.max(0, value.length - visibleCharacters.length))}${visibleCharacters}`;
 };
 
-const getInitial = (value?: string): string => value?.trim().charAt(0).toUpperCase() || "T";
+const getInitial = (value?: string): string =>
+  value?.trim().charAt(0).toUpperCase() || "T";
 
 function LoadingCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2" aria-label="Loading pending reviews">
       {Array.from({ length: 4 }, (_, index) => (
-        <div
-          key={index}
-          className="animate-pulse rounded-3xl border border-gray-100 bg-white p-5 shadow-sm"
-        >
-          <div className="flex items-start gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-rose-100" />
-            <div className="flex-1 space-y-3">
-              <div className="h-4 w-2/3 rounded bg-gray-200" />
-              <div className="h-3 w-full rounded bg-gray-100" />
-              <div className="h-3 w-4/5 rounded bg-gray-100" />
-            </div>
-          </div>
-          <div className="mt-6 h-10 w-full rounded-xl bg-rose-100" />
-        </div>
+        <Skeleton key={index} className="h-48 w-full !rounded-2xl" />
       ))}
     </div>
   );
 }
 
-function EmptyState({ target }: { target: ReviewTarget }) {
+function EmptyQueue({ target }: { target: ReviewTarget }) {
   const label = target === "restaurant" ? "restaurants" : "riders";
 
   return (
-    <div className="rounded-3xl border border-dashed border-[#f7d0dc] bg-[#fff7fa] px-6 py-14 text-center">
-      <p className="text-lg font-semibold text-gray-900">
-        No pending {label}
+    <div className="card-flat border-dashed bg-butter px-6 py-14 text-center">
+      <p className="font-display text-lg font-extrabold">
+        Queue clear — no pending {label}
       </p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 font-medium text-smoke">
         New {label} awaiting verification will appear here for review.
       </p>
     </div>
   );
 }
+
+const DetailCell = ({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) => (
+  <div>
+    <dt className="text-[10px] font-black tracking-widest text-smoke uppercase">
+      {label}
+    </dt>
+    <dd
+      className={`mt-1 text-sm font-bold ${mono ? "font-mono tracking-wider" : ""}`}
+    >
+      {value}
+    </dd>
+  </div>
+);
 
 const Admin = () => {
   const [restaurants, setRestaurants] = useState<IRestaurant[]>([]);
@@ -181,18 +193,25 @@ const Admin = () => {
   const activeCount = tab === "restaurant" ? restaurants.length : riders.length;
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="overflow-hidden rounded-[28px] bg-linear-to-r from-[#E23774] via-[#ef4b84] to-[#f68caf] p-6 text-white shadow-sm sm:p-8">
+    <main className="min-h-screen bg-cream">
+      <header className="border-b-2 border-ink bg-cream">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Logo size={32} />
+          <span className="chip bg-blush">Admin portal</span>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+        <div className="card relative overflow-hidden bg-ink p-6 text-cream sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-medium tracking-wide text-white/80">
-                TOMATO · ADMIN PORTAL
+              <p className="text-xs font-black tracking-[0.25em] text-mustard uppercase">
+                Tomato · Admin
               </p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+              <h1 className="font-display mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
                 Review pending applications
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
+              <p className="mt-3 max-w-2xl text-sm leading-6 font-medium text-cream/70">
                 Verify restaurant partners and delivery riders before they join
                 the platform.
               </p>
@@ -202,72 +221,82 @@ const Admin = () => {
               type="button"
               onClick={() => void fetchPendingReviews()}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#E23774] transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-70"
+              className="btn bg-mustard text-ink shadow-[2.5px_2.5px_0_0_rgba(255,253,249,0.35)]"
             >
               <BiRefresh
                 className={`h-5 w-5 ${loading ? "animate-spin" : ""}`}
                 aria-hidden="true"
               />
-              {loading ? "Refreshing..." : "Refresh reviews"}
+              {loading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
-        </header>
+          <div className="pointer-events-none absolute -right-4 -bottom-8 hidden opacity-90 sm:block" aria-hidden="true">
+            <Scooter size={120} />
+          </div>
+        </div>
 
-        <section
-          className="grid gap-4 sm:grid-cols-3"
-          aria-label="Pending review summary"
-        >
-          <div className="rounded-2xl border border-[#f7d0dc] bg-[#fff7fa] p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E23774]">
-              Total queue
-            </p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">
-              {restaurants.length + riders.length}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">Applications to review</p>
+        {/* Stat cards */}
+        <section className="grid gap-4 sm:grid-cols-2">
+          <div className="card flex items-center gap-4 p-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-blush">
+              <BiStore className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-smoke uppercase">
+                Restaurants
+              </p>
+              <p className="font-display text-3xl font-extrabold">
+                {restaurants.length}
+              </p>
+              <p className="text-xs font-medium text-smoke">
+                Awaiting verification
+              </p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Restaurants
-            </p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">
-              {restaurants.length}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">Awaiting verification</p>
-          </div>
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Riders
-            </p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{riders.length}</p>
-            <p className="mt-1 text-sm text-gray-500">Awaiting verification</p>
+          <div className="card flex items-center gap-4 p-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-skywash">
+              <Scooter size={30} />
+            </span>
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-smoke uppercase">
+                Riders
+              </p>
+              <p className="font-display text-3xl font-extrabold">
+                {riders.length}
+              </p>
+              <p className="text-xs font-medium text-smoke">
+                Awaiting verification
+              </p>
+            </div>
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-[28px] bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-gray-100 px-5 pt-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+        <section className="card overflow-hidden">
+          <div className="flex flex-col gap-3 border-b-2 border-ink px-5 pt-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="font-display text-xl font-extrabold tracking-tight">
                 Verification queue
               </h2>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm font-medium text-smoke">
                 Review submitted details and approve eligible partners.
               </p>
             </div>
-            <span className="self-start rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 sm:mb-4 sm:self-auto">
+            <span className="chip mb-3 self-start bg-butter sm:mb-4">
               {activeCount} pending
             </span>
           </div>
 
           <div
-            className="flex gap-6 border-b border-gray-100 px-5 sm:px-6"
+            className="flex border-b-2 border-ink"
             role="tablist"
             aria-label="Verification type"
           >
-            {([
-              ["restaurant", "Restaurants", restaurants.length],
-              ["rider", "Riders", riders.length],
-            ] as const).map(([target, label, count]) => {
+            {(
+              [
+                ["restaurant", "Restaurants", restaurants.length],
+                ["rider", "Riders", riders.length],
+              ] as const
+            ).map(([target, label, count]) => {
               const active = tab === target;
               return (
                 <button
@@ -278,18 +307,16 @@ const Admin = () => {
                   aria-selected={active}
                   aria-controls={`${target}-panel`}
                   onClick={() => setTab(target)}
-                  className={`border-b-2 px-1 py-4 text-sm font-semibold transition ${
+                  className={`flex-1 cursor-pointer px-4 py-3 text-sm font-black tracking-wide uppercase transition-colors ${
                     active
-                      ? "border-[#E23774] text-[#E23774]"
-                      : "border-transparent text-gray-500 hover:text-[#E23774]"
+                      ? "bg-tomato text-white"
+                      : "bg-paper text-smoke hover:bg-butter"
                   }`}
                 >
                   {label}
                   <span
-                    className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
-                      active
-                        ? "bg-[#fff0f5] text-[#E23774]"
-                        : "bg-gray-100 text-gray-500"
+                    className={`ml-2 rounded-full border border-ink px-2 py-0.5 text-[10px] ${
+                      active ? "bg-paper text-ink" : "bg-mist text-ink"
                     }`}
                   >
                     {count}
@@ -309,7 +336,7 @@ const Admin = () => {
               <LoadingCards />
             ) : tab === "restaurant" ? (
               restaurants.length === 0 ? (
-                <EmptyState target="restaurant" />
+                <EmptyQueue target="restaurant" />
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {restaurants.map((restaurant) => {
@@ -321,10 +348,10 @@ const Admin = () => {
                     return (
                       <article
                         key={restaurant._id}
-                        className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition hover:border-[#f7d0dc] hover:shadow-md"
+                        className="card-flat card-hover overflow-hidden"
                       >
                         <div className="flex gap-4 p-5">
-                          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#fff0f5] text-xl font-bold text-[#E23774]">
+                          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-ink bg-blush font-display text-xl font-extrabold">
                             <span>{getInitial(restaurant.name)}</span>
                             {restaurant.image && (
                               <img
@@ -339,56 +366,50 @@ const Admin = () => {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
-                              <h3 className="truncate text-lg font-semibold text-gray-900">
+                              <h3 className="font-display truncate text-lg font-extrabold">
                                 {restaurant.name}
                               </h3>
-                              <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                              <span className="chip shrink-0 bg-butter !text-[10px]">
                                 Pending
                               </span>
                             </div>
-                            <p className="mt-1 line-clamp-2 text-sm leading-5 text-gray-500">
-                              {restaurant.description || "No description provided."}
+                            <p className="mt-1 line-clamp-2 text-sm leading-5 font-medium text-smoke">
+                              {restaurant.description ||
+                                "No description provided."}
                             </p>
                           </div>
                         </div>
 
-                        <dl className="grid gap-3 border-t border-gray-100 px-5 py-4 text-sm sm:grid-cols-2">
-                          <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                              Address
-                            </dt>
-                            <dd className="mt-1 line-clamp-2 text-gray-700">
-                              {restaurant.autoLocation?.formattedAddress ||
-                                "Address not provided"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                              Contact
-                            </dt>
-                            <dd className="mt-1 text-gray-700">
-                              {restaurant.phone || "Not provided"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                              Submitted
-                            </dt>
-                            <dd className="mt-1 text-gray-700">
-                              {formatDate(restaurant.createdAt)}
-                            </dd>
-                          </div>
+                        <dl className="grid gap-3 border-t-2 border-mist px-5 py-4 sm:grid-cols-2">
+                          <DetailCell
+                            label="Address"
+                            value={
+                              restaurant.autoLocation?.formattedAddress ||
+                              "Address not provided"
+                            }
+                          />
+                          <DetailCell
+                            label="Contact"
+                            value={
+                              restaurant.phone
+                                ? String(restaurant.phone)
+                                : "Not provided"
+                            }
+                          />
                         </dl>
 
-                        <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
+                        <div className="border-t-2 border-ink bg-cream px-5 py-4">
                           <button
                             type="button"
-                            onClick={() => void approve("restaurant", restaurant._id)}
+                            onClick={() =>
+                              void approve("restaurant", restaurant._id)
+                            }
                             disabled={approvingRestaurant}
-                            className="w-full rounded-xl bg-[#E23774] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#cc2f67] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="btn-primary w-full !py-2.5"
                           >
+                            <BiCheck className="h-5 w-5" />
                             {approvingRestaurant
-                              ? "Approving restaurant..."
+                              ? "Approving…"
                               : "Approve restaurant"}
                           </button>
                         </div>
@@ -398,7 +419,7 @@ const Admin = () => {
                 </div>
               )
             ) : riders.length === 0 ? (
-              <EmptyState target="rider" />
+              <EmptyQueue target="rider" />
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {riders.map((rider) => {
@@ -407,10 +428,10 @@ const Admin = () => {
                   return (
                     <article
                       key={rider._id}
-                      className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition hover:border-[#f7d0dc] hover:shadow-md"
+                      className="card-flat card-hover overflow-hidden"
                     >
                       <div className="flex gap-4 p-5">
-                        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#fff0f5] text-xl font-bold text-[#E23774]">
+                        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-ink bg-skywash font-display text-xl font-extrabold">
                           <span>R</span>
                           {rider.picture && (
                             <img
@@ -425,62 +446,49 @@ const Admin = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="font-display text-lg font-extrabold">
                               Delivery rider
                             </h3>
-                            <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            <span className="chip shrink-0 bg-butter !text-[10px]">
                               Pending
                             </span>
                           </div>
-                          <p className="mt-1 text-sm leading-5 text-gray-500">
+                          <p className="mt-1 text-sm leading-5 font-medium text-smoke">
                             Review identity details before enabling deliveries.
                           </p>
                         </div>
                       </div>
 
-                      <dl className="grid gap-3 border-t border-gray-100 px-5 py-4 text-sm sm:grid-cols-2">
-                        <div>
-                          <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                            Phone
-                          </dt>
-                          <dd className="mt-1 text-gray-700">
-                            {rider.phoneNumber || "Not provided"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                            Submitted
-                          </dt>
-                          <dd className="mt-1 text-gray-700">
-                            {formatDate(rider.createdAt)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                            Aadhaar
-                          </dt>
-                          <dd className="mt-1 font-medium tracking-wider text-gray-700">
-                            {maskDocument(rider.aadharNumber)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                            Driving licence
-                          </dt>
-                          <dd className="mt-1 font-medium tracking-wider text-gray-700">
-                            {maskDocument(rider.drivingLicenseNumber)}
-                          </dd>
-                        </div>
+                      <dl className="grid gap-3 border-t-2 border-mist px-5 py-4 sm:grid-cols-2">
+                        <DetailCell
+                          label="Phone"
+                          value={rider.phoneNumber || "Not provided"}
+                        />
+                        <DetailCell
+                          label="Submitted"
+                          value={formatDate(rider.createdAt)}
+                        />
+                        <DetailCell
+                          label="Aadhaar"
+                          value={maskDocument(rider.aadharNumber)}
+                          mono
+                        />
+                        <DetailCell
+                          label="Driving licence"
+                          value={maskDocument(rider.drivingLicenseNumber)}
+                          mono
+                        />
                       </dl>
 
-                      <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
+                      <div className="border-t-2 border-ink bg-cream px-5 py-4">
                         <button
                           type="button"
                           onClick={() => void approve("rider", rider._id)}
                           disabled={approvingRider}
-                          className="w-full rounded-xl bg-[#E23774] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#cc2f67] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="btn-primary w-full !py-2.5"
                         >
-                          {approvingRider ? "Approving rider..." : "Approve rider"}
+                          <BiCheck className="h-5 w-5" />
+                          {approvingRider ? "Approving…" : "Approve rider"}
                         </button>
                       </div>
                     </article>
