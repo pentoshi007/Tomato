@@ -3,7 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { IAddress, IRestaurant, ICart, IMenuItem } from "../types";
-import { restaurantService, utilsService } from "../App";
+import { restaurantService, utilsService } from "../config";
 import toast from "react-hot-toast";
 import { getDistanceKm } from "../utils/getDistanceKm";
 import {
@@ -12,6 +12,7 @@ import {
   getAmountForFreeDelivery,
   PLATFORM_FEE,
   FREE_DELIVERY_THRESHOLD,
+  MAX_DELIVERY_DISTANCE_KM,
 } from "../utils/pricing";
 const TOMATO_COLOR = "#E23744";
 
@@ -115,12 +116,17 @@ export default function CheckoutPage() {
     const [restLng, restLat] = restaurant.autoLocation.coordinates;
     const [addrLng, addrLat] = selectedAddress.location.coordinates;
     const distance = getDistanceKm(restLat, restLng, addrLat, addrLng);
+    if (distance > MAX_DELIVERY_DISTANCE_KM) {
+      toast.error(
+        `This address is ${distance.toFixed(1)} km away. Delivery is available within ${MAX_DELIVERY_DISTANCE_KM} km of the restaurant.`,
+      );
+      return null;
+    }
     setCreatingOrder(true);
     try {
       const { data } = await axios.post(
         `${restaurantService}/api/order/new`,
         {
-          distance,
           restaurantId: restaurant._id,
           addressId: selectedAddressId,
           paymentMethod,
@@ -130,9 +136,14 @@ export default function CheckoutPage() {
         },
       );
       return data;
-    } catch (error) {
+    } catch (error: unknown) {
       console.log(error);
-      toast.error("Failed to create order");
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(
+        typeof message === "string" ? message : "Failed to create order",
+      );
       return null;
     } finally {
       setCreatingOrder(false);

@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import { Toaster } from "react-hot-toast";
@@ -15,10 +21,11 @@ import AddAddressPage from "./pages/Address";
 import CheckoutPage from "./pages/Checkout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import OrderSuccess from "./pages/OrderSuccess";
-export const AuthService = "http://localhost:3000";
-export const restaurantService = "http://localhost:3001";
-export const utilsService = "http://localhost:3002";
-export const realtimeService = "http://localhost:3005";
+import Orders from "./pages/Orders";
+import OrderPage from "./pages/OrderPage";
+import RiderDashboard from "./pages/RiderDashboard";
+import Admin from "./pages/Admin";
+
 
 // Redirect /paymentsuccess?session_id=... → /order-success?session_id=...
 // Handles Stripe sessions created before the success_url was updated.
@@ -28,7 +35,15 @@ function PaymentSuccessRedirect() {
 }
 
 const App = () => {
-  const { user } = useAppContext();
+  const { user, loading } = useAppContext();
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
+  }
+
   if (user?.role === "seller") {
     return (
       <>
@@ -37,6 +52,23 @@ const App = () => {
       </>
     );
   }
+  if (user?.role === "rider") {
+    return (
+      <>
+        <RiderDashboard />
+        <Toaster />
+      </>
+    );
+  }
+  if (user?.role === "admin") {
+    return (
+      <>
+        <Admin />
+        <Toaster />
+      </>
+    );
+  }
+
   return (
     <>
       <BrowserRouter>
@@ -49,11 +81,16 @@ const App = () => {
             <Route path="/cart" element={<Cart />} />
             <Route path="/address" element={<AddAddressPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/order/:orderId" element={<OrderPage />} />
             <Route
               path="/paymentsuccess/:paymentId"
               element={<PaymentSuccess />}
             />
-            <Route path="/paymentsuccess" element={<PaymentSuccessRedirect />} />
+            <Route
+              path="/paymentsuccess"
+              element={<PaymentSuccessRedirect />}
+            />
             <Route path="/order-success" element={<OrderSuccess />} />
           </Route>
           <Route element={<PublicRoute />}>

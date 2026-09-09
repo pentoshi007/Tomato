@@ -1,9 +1,10 @@
 import axios from "axios";
 import type { IRestaurant } from "../types";
 import { useState } from "react";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import toast from "react-hot-toast";
 import { BiMapPin, BiEdit } from "react-icons/bi";
+import { useAppContext } from "../context/AppContext";
 
 interface props {
   restaurant: IRestaurant;
@@ -57,6 +58,30 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
       toast.error("Problem in updating restaurant");
     } finally {
       setEditMode(false);
+      setLoading(false);
+    }
+  };
+  const { setIsAuth, setUser } = useAppContext();
+  const logoutHandler = async () => {
+    try {
+      await axios.put(
+        `${restaurantService}/api/restaurant/status`,
+        { status: false },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      localStorage.removeItem("token");
+      setIsAuth(false);
+      setUser(null);
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.log(error);
+      toast.error("Problem in logging out");
+    } finally {
       setLoading(false);
     }
   };
@@ -131,6 +156,15 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
                 className={`px-3 py-1 rounded text-sm font-medium text-white ${isOpen ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
               >
                 {isOpen ? "Close Restaurant" : "Open Restaurant"}
+              </button>
+            )}
+            {isSeller && (
+              <button
+                onClick={logoutHandler}
+                disabled={loading}
+                className={`px-3 py-1 rounded text-sm font-medium text-white bg-[#E23774] hover:bg-[#E23774]`}
+              >
+                Logout
               </button>
             )}
           </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import axios from "axios";
 import { BiUpload } from "react-icons/bi";
 

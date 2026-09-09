@@ -7,6 +7,7 @@ export interface IRestaurant extends Document {
     ownerId: string,
     phone:number,
     isVerified:boolean,
+    soundEnabled:boolean,
     autoLocation:{
         type: "Point",
         // "Point" is a GeoJSON object type used in MongoDB for geospatial queries.
@@ -27,6 +28,7 @@ const schema = new Schema<IRestaurant>({
     ownerId: { type: String, required: true, },
     phone: { type: Number, required: true, },
     isVerified: { type: Boolean, default: false, required: true, },
+    soundEnabled: { type: Boolean, default: false, },
     autoLocation: { type: { type: String, enum: ["Point"], required: true, }, coordinates: { type: [Number], required: true, }, formattedAddress: { type: String, required: true, }, },
     isOpen: { type: Boolean, default: false, },
 },{timestamps: true});

@@ -1,6 +1,6 @@
 import axios from "axios";
-import { createContext, useState, useEffect, useContext } from "react";
-import { AuthService, restaurantService } from "../App.tsx";
+import { createContext, useState, useEffect, useContext, useRef } from "react";
+import { AuthService, restaurantService, utilsService } from "../config";
 import type { AppContextType, ICart, Location } from "../types";
 import type { User } from "../types";
 import toast from "react-hot-toast";
@@ -20,6 +20,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [cart, setCart] = useState<ICart[]>([]);
   const [subTotal, setSubTotal] = useState(0);
   const [quantity, setQuantity] = useState(0);
+  const locationRequestStartedRef = useRef(false);
 
   async function fetchUser() {
     try {
@@ -51,21 +52,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       toast.error("Please enable location services to continue");
       return;
     }
+    // React Strict Mode runs mount effects twice in development. Avoid
+    // requesting the same location and geocoding it twice.
+    if (locationRequestStartedRef.current) return;
+    locationRequestStartedRef.current = true;
     setLoadingLocation(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en`,
-            {
-              headers: {
-                "User-Agent": "TomatoDeliveryApp/1.0 (local-dev)",
-              },
-            },
+          const { data } = await axios.get(
+            `${utilsService}/api/geocode/reverse`,
+            { params: { lat: latitude, lon: longitude } },
           );
-          if (!res.ok) throw new Error(`Nominatim ${res.status}`);
-          const data = await res.json();
           setLocation({
             latitude,
             longitude,

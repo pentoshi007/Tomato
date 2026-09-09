@@ -11,11 +11,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/internal", internalRouter);
+app.use("/api/internal", internalRouter);
 const server = http.createServer(app);
 app.use("/api/v1/internal", internalRouter);
 
 initSocket(server);
 
-server.listen(process.env.PORT || 3005, () => {
-  console.log(`[realtime] server listening on port ${process.env.PORT || 3005}`);
+server.listen(process.env.PORT || 3001, () => {
+  console.log(
+    `[realtime] server listening on port ${process.env.PORT || 3001}`,
+  );
 });

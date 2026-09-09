@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import type { IRestaurant, IMenuItem } from "../types";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import RestaurantProfile from "../components/RestaurantProfile";
@@ -58,9 +58,14 @@ const RestaurantPage = () => {
       toast.success("Item added to cart successfully");
       fetchMyCart();
       setSelectedItem(null);
-    } catch (error) {
-      console.log(error);
-      toast.error("Problem in adding to cart");
+    } catch (error: unknown) {
+      console.error(error);
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(
+        typeof message === "string" ? message : "Problem in adding to cart",
+      );
     } finally {
       setAddingToCart(false);
     }
@@ -80,6 +85,7 @@ const RestaurantPage = () => {
         <h2 className="mb-3 text-lg font-semibold">Menu</h2>
         <MenuItems
           items={menuItems}
+          restaurantId={id}
           isSeller={false}
           onItemDeleted={() => {}}
           onItemClick={setSelectedItem}

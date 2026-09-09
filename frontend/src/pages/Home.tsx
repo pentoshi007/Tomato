@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { IRestaurant } from "../types";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import RestaurantCard from "../components/RestaurantCard";
 import { getDistanceKm } from "../utils/getDistanceKm";
 

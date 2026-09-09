@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import { BiUpload, BiMapPin } from "react-icons/bi";
 
 interface props {

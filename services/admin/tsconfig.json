@@ -1,0 +1,59 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "NodeNext",
+    // Specifies how TypeScript looks up modules: 'NodeNext' enables Node.js' ESM and CommonJS module resolution features (matching your 'module' setting)
+    "moduleResolution": "NodeNext",
+    "target": "ES2020",
+    "types": [],
+    // For nodejs:
+    "lib": ["ES2020"],
+    "types": ["node"],
+    // and npm install -D @types/node
+
+    // Other Outputs
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style Options
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    // "jsx": "react-jsx",
+    // "verbatimModuleSyntax": true,
+    // "isolatedModules": true,
+    // "noUncheckedSideEffectImports": true,
+    // "moduleDetection": "force",
+    // "skipLibCheck": true disables type checking of declaration files (*.d.ts), speeding up builds and reducing errors from external libraries.
+    "skipLibCheck": true,
+
+    // "esModuleInterop": true enables default importing compatibility between CommonJS and ES modules; allows `import foo from "foo"` instead of `import * as foo from "foo"`.
+    "esModuleInterop": true,
+
+    // "resolveJsonModule": true allows you to import .json files as modules in TypeScript (e.g., `import data from "./data.json";`).
+    "resolveJsonModule": true,
+
+    // "noUncheckedIndexedAccess": true causes every indexed access (like `obj[key]`) to be considered possibly undefined, resulting in stricter null/undefined checks.
+    "noUncheckedIndexedAccess": true,
+
+    // "exactOptionalPropertyTypes": true ensures that `?` properties are truly "optional or absent," tightening checks where distinguishing `{ foo?: string }` from `{ foo: string | undefined }` matters.
+    "exactOptionalPropertyTypes": true
+  }
+}

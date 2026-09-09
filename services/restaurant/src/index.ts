@@ -25,9 +25,9 @@ async function startServer() {
     await connectDB();
     await connectToRabbitMQ();
     await consumePaymentEvents();
-    app.listen(process.env.PORT || 3001, () => {
+    app.listen(process.env.PORT || 3002, () => {
       console.log(
-        `Restaurant service is running on port ${process.env.PORT || 3001}`,
+        `Restaurant service is running on port ${process.env.PORT || 3002}`,
       );
     });
   } catch (error) {

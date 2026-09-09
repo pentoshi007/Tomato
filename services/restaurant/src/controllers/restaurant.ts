@@ -133,6 +133,38 @@ export const updateRestaurantStatus = TryCatch(
   },
 );
 
+export const updateRestaurantSoundPreference = TryCatch(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ message: "Unauthorized, Please login to continue" });
+      return;
+    }
+
+    const { soundEnabled } = req.body;
+    if (typeof soundEnabled !== "boolean") {
+      res.status(400).json({ message: "soundEnabled must be a boolean" });
+      return;
+    }
+
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { ownerId: user._id },
+      { soundEnabled },
+      { returnDocument: "after" },
+    );
+    if (!restaurant) {
+      res.status(404).json({ message: "Restaurant not found" });
+      return;
+    }
+
+    return res.status(200).json({
+      message: soundEnabled ? "Sound enabled" : "Sound disabled",
+      soundEnabled: restaurant.soundEnabled,
+      restaurant,
+    });
+  },
+);
+
 export const updateRestaurant = TryCatch(
   async (req: AuthenticatedRequest, res: Response) => {
     const user = req.user;

@@ -8,7 +8,7 @@ import { SocketProvider } from './context/SocketContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId="561548682278-eajccnk37mgg2eb7gbpkk4l7pjlugciq.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AppProvider>
         <SocketProvider>  
         <App />

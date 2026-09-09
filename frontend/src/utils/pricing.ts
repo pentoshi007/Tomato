@@ -3,6 +3,7 @@
 export const FREE_DELIVERY_THRESHOLD = 250;
 export const DELIVERY_FEE = 49;
 export const PLATFORM_FEE = 5;
+export const MAX_DELIVERY_DISTANCE_KM = 10;
 
 export const getDeliveryFee = (subTotal: number): number =>
   subTotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0;

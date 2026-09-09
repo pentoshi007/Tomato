@@ -2,7 +2,7 @@ import { BiEdit, BiToggleLeft, BiToggleRight, BiCartAdd } from "react-icons/bi";
 import type { IMenuItem } from "../types";
 import { toast } from "react-hot-toast";
 import axios, { AxiosError } from "axios";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import { useAppContext } from "../context/AppContext";
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ interface MenuItemsProps {
   items: IMenuItem[];
   onItemDeleted: () => void;
   isSeller: boolean;
+  restaurantId?: string;
   onItemClick?: (item: IMenuItem) => void;
 }
 
@@ -18,6 +19,7 @@ const MenuItems = ({
   isSeller,
   onItemDeleted,
   onItemClick,
+  restaurantId,
 }: MenuItemsProps) => {
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
   const { fetchMyCart } = useAppContext();
@@ -63,7 +65,11 @@ const MenuItems = ({
       }
     }
   };
-  const addToCart = async (restaurantId: string, itemId: string) => {
+  const addToCart = async (restaurantId: string | undefined, itemId: string) => {
+    if (!restaurantId) {
+      toast.error("Restaurant information is missing");
+      return;
+    }
     try {
       setLoadingItemId(itemId);
       await axios.post(
@@ -80,9 +86,14 @@ const MenuItems = ({
       );
       toast.success("Item added to cart successfully");
       fetchMyCart();
-    } catch (error) {
-      console.log(error);
-      toast.error("Problem in adding to cart");
+    } catch (error: unknown) {
+      console.error(error);
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(
+        typeof message === "string" ? message : "Problem in adding to cart",
+      );
     } finally {
       setLoadingItemId(null);
     }
@@ -169,7 +180,7 @@ const MenuItems = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  addToCart(item.restaurantId, item._id);
+                  addToCart(restaurantId ?? item.restaurantId, item._id);
                 }}
                 disabled={!item.isAvailable || loadingItemId === item._id}
                 title="Add to cart"

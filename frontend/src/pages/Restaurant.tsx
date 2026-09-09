@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { IRestaurant, SellerTabs } from "../types";
 import { useState, useEffect } from "react";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import { useSocket } from "../context/useSocket";
 import { toast } from "react-hot-toast";
 import AddRestaurant from "./AddRestaurant";
@@ -94,7 +94,15 @@ export const Restaurant = () => {
         isSeller={true}
         onUpdate={setRestaurant}
       />
-      <RestaurantOrders restaurantId={restaurant._id} />
+      <RestaurantOrders
+        restaurantId={restaurant._id}
+        soundEnabled={restaurant.soundEnabled}
+        onSoundEnabledChange={(enabled) =>
+          setRestaurant((current) =>
+            current ? { ...current, soundEnabled: enabled } : current,
+          )
+        }
+      />
       <div className="rounded-xl bg-white shadow-sm">
         <div className="flex border-b justify-around">
           {[

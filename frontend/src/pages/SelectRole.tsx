@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { AuthService } from "../App.tsx";
+import { AuthService } from "../config";
 import { useAppContext } from "../context/AppContext";
 
 type Role = "customer" | "rider" | "seller";

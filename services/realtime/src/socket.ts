@@ -44,9 +44,9 @@ export const initSocket = (server: http.Server) => {
       socket.disconnect();
       return;
     }
-    socket.join(`user_${userId}`);
+    socket.join(`user:${userId}`);
     if (auth?.restaurantId) {
-      socket.join(`restaurant_${auth.restaurantId}`);
+      socket.join(`restaurant:${auth.restaurantId}`);
     }
     const joinedRooms = Array.from(socket.rooms).join(", ");
     console.log(

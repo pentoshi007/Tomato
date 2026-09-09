@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { utilsService } from "../App";
+import { utilsService } from "../config";
 import { useAppContext } from "../context/AppContext";
 
 const TOMATO_COLOR = "#E23744";

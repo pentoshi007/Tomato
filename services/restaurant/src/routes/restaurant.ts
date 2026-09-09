@@ -4,6 +4,7 @@ import {
   fetchMyRestaurant,
   updateRestaurant,
   updateRestaurantStatus,
+  updateRestaurantSoundPreference,
   getNearbyRestaurants,
   fetchSingleRestaurant,
 } from "../controllers/restaurant.js";
@@ -15,6 +16,7 @@ const router = Router();
 router.post("/new", isAuth, isSeller, uploadFile, addRestaurant);
 router.get("/my", isAuth, isSeller, fetchMyRestaurant);
 router.put("/status", isAuth, isSeller, updateRestaurantStatus);
+router.patch("/sound", isAuth, isSeller, updateRestaurantSoundPreference);
 router.put("/edit", isAuth, isSeller, updateRestaurant);
 router.get("/nearby", isAuth, getNearbyRestaurants);
 router.get("/:id", isAuth, fetchSingleRestaurant);

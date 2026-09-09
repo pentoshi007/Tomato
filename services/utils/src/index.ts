@@ -5,6 +5,7 @@ import cors from "cors";
 import uploadRoutes from "./routes/cloudinary.js";
 import { connectToRabbitMQ } from "./config/rabbitmq.js";
 import paymentRoutes from "./routes/payment.js";
+import geocodeRoutes from "./routes/geocode.js";
 dotenv.config();
 connectToRabbitMQ();
 
@@ -28,11 +29,12 @@ cloudinary.v2.config({
 
 app.use("/api", uploadRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/geocode", geocodeRoutes);
 function startServer() {
   try {
-    app.listen(process.env.PORT || 3002, () => {
+    app.listen(process.env.PORT || 3004, () => {
       console.log(
-        `Utils service is running on port ${process.env.PORT || 3002}`,
+        `Utils service is running on port ${process.env.PORT || 3004}`,
       );
     });
   } catch (error) {

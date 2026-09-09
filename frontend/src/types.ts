@@ -18,6 +18,7 @@ export interface IRestaurant {
   ownerId: string;
   phone: number;
   isVerified: boolean;
+  soundEnabled: boolean;
   autoLocation: {
     type: "Point";
     // "Point" is a GeoJSON object type used in MongoDB for geospatial queries.
@@ -131,4 +132,16 @@ export interface IAddress {
   };
   createdAt: Date;
   updatedAt: Date;
+}
+export interface IRider {
+  _id: string;
+  picture: string;
+  phoneNumber: string;
+  aadharNumber: string;
+  drivingLicenseNumber: string;
+  isVerified: boolean;
+  soundEnabled: boolean;
+  isAvailable: boolean;
+  lastActiveAt: string;
+  createdAt: string;
 }

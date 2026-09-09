@@ -1,37 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
-import {
-  BiBell,
-  BiRefresh,
-} from "react-icons/bi";
+import { BiBell, BiRefresh } from "react-icons/bi";
 import { useSocket } from "../context/useSocket";
 import type { IOrder } from "../types";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import OrderCard from "./OrderCard";
+import {
+  NEW_ORDER_EVENT,
+  formatOrderDateTime,
+  formatOrderPrice,
+  getOrderStatusClass,
+  getOrderStatusLabel,
+  isActiveOrder,
+} from "../utils/orderflow";
 
 const audio = "/sounds/quack.mp3";
 
-const ACTIVE_STATUS: IOrder["status"][] = [
-  "placed",
-  "accepted",
-  "preparing",
-  "ready_for_rider",
-  "rider_assigned",
-  "picked_up",
-];
+interface RestaurantOrdersProps {
+  restaurantId: string;
+  soundEnabled: boolean;
+  onSoundEnabledChange: (enabled: boolean) => void;
+}
 
-const STATUS_LABEL: Record<IOrder["status"], string> = {
-  placed: "Placed",
-  accepted: "Accepted",
-  preparing: "Preparing",
-  ready_for_rider: "Ready for Rider",
-  rider_assigned: "Rider Assigned",
-  picked_up: "Picked Up",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-};
-
-const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
+const RestaurantOrders = ({
+  restaurantId,
+  soundEnabled,
+  onSoundEnabledChange,
+}: RestaurantOrdersProps) => {
   const { socket } = useSocket();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [orders, setOrders] = useState<IOrder[]>([]);
@@ -45,11 +40,15 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
     audioRef.current.load();
   }, []);
 
+  useEffect(() => {
+    setAudioUnlocked(soundEnabled);
+  }, [soundEnabled]);
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await axios.get(
-        `${restaurantService}/api/order/${restaurantId}`,
+        `${restaurantService}/api/order/restaurant/${restaurantId}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -69,35 +68,61 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
   useEffect(() => {
     if (!socket) return;
     const onNewOrder = () => {
-      if (audioUnlocked && audioRef.current) {
+      if (audioUnlocked && soundEnabled && audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(console.log);
       }
       void fetchOrders();
     };
-    socket.on("order:new", onNewOrder);
+    socket.on(NEW_ORDER_EVENT, onNewOrder);
     return () => {
-      socket.off("order:new", onNewOrder);
+      socket.off(NEW_ORDER_EVENT, onNewOrder);
     };
-  }, [socket, audioUnlocked, fetchOrders]);
+  }, [socket, audioUnlocked, soundEnabled, fetchOrders]);
+  useEffect(() => {
+    if (!socket) return;
+    const onUpdateOrder = () => {
+      fetchOrders();
+    };
+    socket.on("order:rider_assigned", onUpdateOrder);
+    return () => {
+      socket.off("order:rider_assigned", onUpdateOrder);
+    };
+  }, [socket, fetchOrders]);
 
-  const unlockAudio = async () => {
-    if (!audioRef.current) return;
+  const toggleSound = async () => {
+    const nextSoundEnabled = !soundEnabled;
+
     try {
-      await audioRef.current.play();
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setAudioUnlocked(true);
+      if (nextSoundEnabled && audioRef.current) {
+        await audioRef.current.play();
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      const { data } = await axios.patch(
+        `${restaurantService}/api/restaurant/sound`,
+        { soundEnabled: nextSoundEnabled },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+      const persistedSoundEnabled = Boolean(
+        data.soundEnabled ?? nextSoundEnabled,
+      );
+
+      onSoundEnabledChange(persistedSoundEnabled);
+      setAudioUnlocked(persistedSoundEnabled);
     } catch (error) {
-      console.log("Audio unlock failed:", error);
-      setAudioUnlocked(false);
+      console.log("Sound preference update failed:", error);
+      setAudioUnlocked(soundEnabled);
     }
   };
 
-  const activeOrders = orders.filter((o) => ACTIVE_STATUS.includes(o.status));
-  const completedOrders = orders.filter(
-    (o) => !ACTIVE_STATUS.includes(o.status),
-  );
+  const activeOrders = orders.filter(isActiveOrder);
+  const completedOrders = orders.filter((order) => !isActiveOrder(order));
 
   return (
     <section className="rounded-3xl border border-rose-100 bg-white shadow-sm">
@@ -127,21 +152,18 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
             <BiRefresh className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
-          {!audioUnlocked ? (
-            <button
-              type="button"
-              onClick={unlockAudio}
-              className="inline-flex items-center gap-2 rounded-full bg-[#E23744] px-4 py-2 text-sm font-medium text-white hover:bg-[#d92d67]"
-            >
-              <BiBell className="h-4 w-4" />
-              Enable sound
-            </button>
-          ) : (
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Sound on
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+              soundEnabled
+                ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                : "bg-[#E23744] text-white hover:bg-[#d92d67]"
+            }`}
+          >
+            <BiBell className="h-4 w-4" />
+            {soundEnabled ? "Disable sound" : "Enable sound"}
+          </button>
         </div>
       </div>
 
@@ -171,7 +193,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
               <OrderCard
                 key={order._id}
                 order={order}
-                statusLabel={STATUS_LABEL[order.status]}
+                onStatusUpdated={fetchOrders}
               />
             ))
           )}
@@ -204,16 +226,12 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
                   </p>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        order.status === "delivered"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-red-50 text-red-600"
-                      }`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${getOrderStatusClass(order.status)}`}
                     >
-                      {STATUS_LABEL[order.status]}
+                      {getOrderStatusLabel(order.status)}
                     </span>
                     <p className="text-sm font-semibold text-[#E23744]">
-                      ₹{order.totalAmount}
+                      {formatOrderPrice(order.totalAmount)}
                     </p>
                   </div>
                 </div>
@@ -221,7 +239,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
                   {order.deliveryAddress.formattedAddress}
                 </p>
                 <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
-                  <span>{new Date(order.createdAt).toLocaleString()}</span>
+                  <span>{formatOrderDateTime(order.createdAt)}</span>
                   <span className="capitalize">
                     {order.paymentMethod} · {order.items.length} item
                     {order.items.length !== 1 ? "s" : ""}

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { useState } from "react";
 import type { ICart, IRestaurant, IMenuItem } from "../types";
-import { restaurantService } from "../App";
+import { restaurantService } from "../config";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import {

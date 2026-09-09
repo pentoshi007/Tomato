@@ -9,16 +9,20 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { restaurantService } from "../App";
+import { restaurantService, utilsService } from "../config";
 import L from "leaflet";
 import { LuLocateFixed, LuMapPin, LuPhone, LuTrash2, LuLoaderCircle, LuPlus, LuCircleCheck, LuInfo } from "react-icons/lu";
 
+const mapTileUrl = import.meta.env.VITE_MAP_TILE_URL;
+const openStreetMapCopyrightUrl = import.meta.env.VITE_OPENSTREETMAP_COPYRIGHT_URL;
+
 // 🔧 Fix leaflet default marker icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
+  ._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: import.meta.env.VITE_LEAFLET_ICON_RETINA_URL,
+  iconUrl: import.meta.env.VITE_LEAFLET_ICON_URL,
+  shadowUrl: import.meta.env.VITE_LEAFLET_ICON_SHADOW_URL,
 });
 
 interface Address {
@@ -132,26 +136,29 @@ const AddAddressPage = () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`,
+        const { data } = await axios.get(
+          `${utilsService}/api/geocode/reverse`,
           {
+            params: { lat, lon: lng },
             signal: controller.signal,
-            headers: {
-              // Nominatim usage policy requires a descriptive User-Agent
-              "User-Agent": "TomatoDeliveryApp/1.0 (local-dev)",
-            },
           },
         );
-        if (!res.ok) throw new Error(`Nominatim error ${res.status}`);
-        const data = await res.json();
         setFormattedAddress(data.display_name || "");
-      } catch (err: any) {
-        if (err?.name === "AbortError") return; // superseded by newer click
+      } catch (err: unknown) {
+        if (
+          (err instanceof Error && err.name === "AbortError") ||
+          axios.isCancel(err)
+        ) {
+          return; // superseded by newer click
+        }
         console.warn("Geocoding failed:", err);
         // Don't toast — let user type address manually instead
         setFormattedAddress("");
       } finally {
-        setGeocoding(false);
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+          setGeocoding(false);
+        }
       }
     }, 600);
   }, []);
@@ -228,8 +235,13 @@ const AddAddressPage = () => {
       setLongitude(null);
       setMobileError("");
       fetchAddresses();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to save address");
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(
+        typeof message === "string" ? message : "Failed to save address",
+      );
     } finally {
       setAdding(false);
     }
@@ -324,8 +336,8 @@ const AddAddressPage = () => {
             zoomControl={true}
           >
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url={mapTileUrl}
+              attribution={`&copy; <a href="${openStreetMapCopyrightUrl}">OpenStreetMap</a>`}
             />
             <LocationPicker setLocation={setLocation} />
             <LocateMeButton

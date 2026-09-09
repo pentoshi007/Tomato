@@ -6,7 +6,7 @@ import {
 } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useAppContext } from "./AppContext";
-import { realtimeService } from "../App";
+import { realtimeService } from "../config";
 import { SocketContext } from "./socketContext";
 
 // ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuth, createSocket, destroySocket]);
 
   // Call after saving an updated token to localStorage so the socket
-  // reconnects and joins the correct rooms (e.g. restaurant_<id>).
+  // reconnects and joins the correct rooms (e.g. restaurant:<id>).
   const reconnect = useCallback(() => {
     if (!isAuth) return;
     createSocket();
