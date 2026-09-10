@@ -15,7 +15,8 @@ else
   SERVICES=(auth admin realtime restaurant rider utils)
 fi
 
-DOCKER_USER="${DOCKER_USER:-pentoshi007}"
+DOCKER_USER="${DOCKER_USER:-aniket00736}"
+IMAGE_PREFIX="${IMAGE_PREFIX:-tomato-}"
 SHA="$(git rev-parse --short HEAD)"
 LOG_DIR="$(mktemp -d)"
 trap 'rm -rf "$LOG_DIR"' EXIT
@@ -48,14 +49,14 @@ run_parallel() {
 
 build_image() {
   docker build \
-    -t "$DOCKER_USER/$1:$SHA" \
-    -t "$DOCKER_USER/$1:latest" \
+    -t "$DOCKER_USER/$IMAGE_PREFIX$1:$SHA" \
+    -t "$DOCKER_USER/$IMAGE_PREFIX$1:latest" \
     "services/$1"
 }
 
 push_image() {
-  docker push "$DOCKER_USER/$1:$SHA"
-  docker push "$DOCKER_USER/$1:latest"
+  docker push "$DOCKER_USER/$IMAGE_PREFIX$1:$SHA"
+  docker push "$DOCKER_USER/$IMAGE_PREFIX$1:latest"
 }
 
 run_parallel build_image
@@ -64,4 +65,4 @@ if [[ "$PUSH" == true ]]; then
   run_parallel push_image
 fi
 
-echo "done: ${SERVICES[*]} -> $DOCKER_USER/<service>:$SHA and :latest"
+echo "done: ${SERVICES[*]} -> $DOCKER_USER/${IMAGE_PREFIX}<service>:$SHA and :latest"

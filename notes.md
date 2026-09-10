@@ -54,7 +54,7 @@ Queue values in use: `PAYMENT_QUEUE=payment_event`, `ORDER_READY_QUEUE=order_rea
 
 Complete reference: [docs/docker.md](docs/docker.md). Summary:
 
-`scripts/docker-build-all.sh` builds all six service images in parallel (per-service logs are tailed on failure) and tags them `<user>/<service>:<short-sha>` and `<user>/<service>:latest`:
+`scripts/docker-build-all.sh` builds all six service images in parallel (per-service logs are tailed on failure) and tags them `aniket00736/tomato-<service>:<short-sha>` and `:latest`:
 
 ```bash
 ./scripts/docker-build-all.sh                    # build all six
@@ -62,7 +62,7 @@ Complete reference: [docs/docker.md](docs/docker.md). Summary:
 DOCKER_USER=<user> DOCKERHUB_TOKEN=<token> ./scripts/docker-build-all.sh --push
 ```
 
-`DOCKER_USER` defaults to `pentoshi007`. With `--push`, the script logs in with `DOCKERHUB_TOKEN` when provided, otherwise it uses your existing `docker login` session. Pushes run in parallel too.
+`DOCKER_USER` defaults to `aniket00736` and `IMAGE_PREFIX` (default `tomato-`) controls repository naming. With `--push`, the script logs in with `DOCKERHUB_TOKEN` when provided, otherwise it uses your existing `docker login` session. Pushes run in parallel too.
 
 CI (`.github/workflows/docker.yml`) runs on every push to `main`: it path-filters `services/<name>/**`, builds and pushes only the changed services with GitHub Actions cache (`type=gha`), tagged with the short SHA and `latest`. A manual `workflow_dispatch` run builds all six. Required repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
 

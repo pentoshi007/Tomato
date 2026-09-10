@@ -43,7 +43,7 @@ npm run dev
 DOCKER_USER=<user> DOCKERHUB_TOKEN=<token> ./scripts/docker-build-all.sh --push
 ```
 
-Images are tagged `<user>/<service>:<short-sha>` and `<user>/<service>:latest`. CI (`.github/workflows/docker.yml`) builds and pushes only the services changed on every push to `main`, using the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets. A manual `workflow_dispatch` run builds all six.
+Images are tagged `aniket00736/tomato-<service>:<short-sha>` and `:latest`. CI (`.github/workflows/docker.yml`) builds and pushes only the services changed on every push to `main`, using the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets. A manual `workflow_dispatch` run builds all six.
 
 ## Deployment
 

@@ -4,7 +4,7 @@ All six backend services are containerized (`services/<name>/Dockerfile`, node:2
 
 ## Local build/push script
 
-`scripts/docker-build-all.sh` builds all six images **in parallel** (per-service logs are captured and tailed on failure) and tags each as `<user>/<service>:<short-sha>` and `<user>/<service>:<latest>`:
+`scripts/docker-build-all.sh` builds all six images **in parallel** (per-service logs are captured and tailed on failure) and tags each as `aniket00736/tomato-<service>:<short-sha>` and `:latest`:
 
 ```bash
 ./scripts/docker-build-all.sh                    # build all six
@@ -12,7 +12,7 @@ All six backend services are containerized (`services/<name>/Dockerfile`, node:2
 DOCKER_USER=<user> DOCKERHUB_TOKEN=<token> ./scripts/docker-build-all.sh --push
 ```
 
-- `DOCKER_USER` defaults to `pentoshi007`.
+- `DOCKER_USER` defaults to `aniket00736`; `IMAGE_PREFIX` (default `tomato-`) controls the repository naming.
 - With `--push`, pushes also run in parallel. If `DOCKERHUB_TOKEN` is set the script logs in with it; otherwise it uses your existing `docker login` session.
 - The short SHA comes from `git rev-parse --short HEAD`, so run it from a clean, committed tree when pushing.
 
@@ -28,4 +28,4 @@ Required repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (a Docker H
 
 ## Current images
 
-Namespace `pentoshi007` on Docker Hub: `auth`, `admin`, `realtime`, `restaurant`, `rider`, `utils`. Image sizes ~250–550 MB. Render services pull these by tag — see [deployment.md](deployment.md).
+Namespace `aniket00736` on Docker Hub, repositories `tomato-auth`, `tomato-admin`, `tomato-realtime`, `tomato-restaurant`, `tomato-rider`, `tomato-utils` — the names Render services already pull. Render services pull these by tag — see [deployment.md](deployment.md).

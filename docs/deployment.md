@@ -1,6 +1,6 @@
 # Deployment
 
-Production topology: six backend services on Render (Docker Hub images), the frontend static build served at `https://tomato.aniketpandey.website`, MongoDB Atlas as the shared database, RabbitMQ on a VPS.
+Production topology: six backend services on Render (Docker Hub images under `aniket00736/tomato-<service>`), the frontend static build served at `https://tomato.aniketpandey.website`, MongoDB Atlas as the shared database, RabbitMQ on a VPS.
 
 ## Services and URLs
 

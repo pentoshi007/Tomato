@@ -66,7 +66,7 @@ jobs:
           context: services/${{ matrix.service }}
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ steps.sha.outputs.short }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tomato-${{ matrix.service }}:${{ steps.sha.outputs.short }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/tomato-${{ matrix.service }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
