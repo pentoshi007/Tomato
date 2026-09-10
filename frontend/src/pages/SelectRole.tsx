@@ -65,6 +65,7 @@ const SelectRole = () => {
       );
       setUser(response.data.user);
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
       navigate("/", { replace: true });
     } catch (error) {
       console.log(error);

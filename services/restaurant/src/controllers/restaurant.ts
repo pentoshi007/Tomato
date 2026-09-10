@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import Restaurant from "../models/Restaurant.js";
 import getBuffer from "../config/datauri.js";
 import { seedDemoCluster } from "../config/demoSeed.js";
+import { withGeoIndexRepair } from "../utils/geoIndex.js";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
@@ -231,7 +232,8 @@ export const getNearbyRestaurants = TryCatch(
       },
     };
 
-    const findNearby = () => Restaurant.find(query).sort({ isOpen: -1 });
+    const findNearby = () =>
+      withGeoIndexRepair(() => Restaurant.find(query).sort({ isOpen: -1 }));
 
     let restaurants = await findNearby();
     if (restaurants.length === 0 && !search && req.user?._id) {

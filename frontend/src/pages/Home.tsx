@@ -98,6 +98,9 @@ const Marquee = () => (
   </div>
 );
 
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 const Home = () => {
   const { location, loadingLocation, city, retryLocation } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -109,18 +112,31 @@ const Home = () => {
     if (!location) return;
     let cancelled = false;
     (async () => {
+      const request = () =>
+        axios.get(`${restaurantService}/api/restaurant/nearby`, {
+          params: { latitude: location.latitude, longitude: location.longitude, search },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+      const fetchNearby = async () => {
+        const response = await request();
+        if (!search && (response.data.restaurants ?? []).length === 0) {
+          await delay(2000);
+          return request();
+        }
+        return response;
+      };
       try {
         setLoading(true);
-        const { latitude, longitude } = location;
-        const response = await axios.get(
-          `${restaurantService}/api/restaurant/nearby`,
-          {
-            params: { latitude, longitude, search },
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          },
-        );
+        let response;
+        try {
+          response = await fetchNearby();
+        } catch {
+          if (cancelled) return;
+          await delay(1500);
+          response = await fetchNearby();
+        }
         if (!cancelled) setRestaurants(response.data.restaurants ?? []);
       } catch (error) {
         console.log(error);

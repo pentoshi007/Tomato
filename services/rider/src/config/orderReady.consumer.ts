@@ -2,6 +2,8 @@ import axios from "axios";
 import { getChannel } from "./rabbitmq.js";
 
 import { Rider } from "../model/Rider.js";
+import { ensureDemoRiders } from "../utils/demoRiderSeed.js";
+import { withGeoIndexRepair } from "../utils/geoIndex.js";
 
 type GeoPoint = { type: string; coordinates: [number, number] };
 
@@ -195,6 +197,15 @@ export const startDemoDelivery = async (event: {
     console.log(`demo delivery skipped for ${event.orderId}: no delivery info`);
     return;
   }
+  if (event.demoClusterKey) {
+    await ensureDemoRiders(
+      event.demoClusterKey,
+      event.location.coordinates[1],
+      event.location.coordinates[0],
+    ).catch((error) =>
+      console.log(`demo rider backfill failed for ${event.orderId}`, error),
+    );
+  }
   const previousRiderId = await previousDemoOrderQuery(
     event.delivery.userId,
     new Date(),
@@ -240,17 +251,19 @@ export const startOrderReadyConsumer = async () => {
           return;
         }
         console.log("Searching for available rider near :" + location);
-        const riders = await Rider.find({
-          isAvailable: true,
-          isVerified: true,
-          type: "normal",
-          location: {
-            $near: {
-              $geometry: location,
-              $maxDistance: 500,
+        const riders = await withGeoIndexRepair(() =>
+          Rider.find({
+            isAvailable: true,
+            isVerified: true,
+            type: "normal",
+            location: {
+              $near: {
+                $geometry: location,
+                $maxDistance: 500,
+              },
             },
-          },
-        });
+          }),
+        );
 
         console.log("Available riders: " + riders.length);
         if (riders.length === 0) {

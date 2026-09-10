@@ -1,27 +1,36 @@
 import axios from "axios";
+import mongoose from "mongoose";
 import Restaurant from "../models/Restaurant.js";
 import MenuItems from "../models/MenuItems.js";
 import { DEMO_RESTAURANT_CATALOG } from "./demoCatalog.js";
 import { destinationPoint } from "../utils/geo.js";
+import { ensureGeoIndexes } from "../utils/geoIndex.js";
 
 const CLUSTER_DEDUPE_KM = 8;
+const GEOCODE_TIMEOUT_MS = 3000;
+const EARTH_RADIUS_KM = 6371;
 
 type AreaContext = { city: string | null; suburb: string | null };
+
+const areaCache = new Map<string, AreaContext>();
 
 const fetchAreaContext = async (
   latitude: number,
   longitude: number,
+  clusterKey: string,
 ): Promise<AreaContext> => {
+  const cached = areaCache.get(clusterKey);
+  if (cached) return cached;
   try {
     const { data } = await axios.get(
       `${process.env.UTILS_SERVICE}/api/geocode/reverse`,
       {
         params: { lat: latitude, lon: longitude },
-        timeout: 5000,
+        timeout: GEOCODE_TIMEOUT_MS,
       },
     );
     const address = data?.address ?? {};
-    return {
+    const area: AreaContext = {
       city:
         address.city ||
         address.town ||
@@ -30,6 +39,8 @@ const fetchAreaContext = async (
         null,
       suburb: address.suburb || address.neighbourhood || address.quarter || null,
     };
+    areaCache.set(clusterKey, area);
+    return area;
   } catch {
     return { city: null, suburb: null };
   }
@@ -50,86 +61,122 @@ const composeAddress = (
 const clusterKeyOf = (latitude: number, longitude: number) =>
   `${latitude.toFixed(2)}:${longitude.toFixed(2)}`;
 
-const seedRidersForCluster = async (
+const seedRidersForCluster = (
   clusterKey: string,
   latitude: number,
   longitude: number,
-  area: AreaContext,
 ) => {
   const riderServiceUrl = process.env.RIDER_SERVICE_URL;
-  if (!riderServiceUrl) return;
-  await axios.post(
-    `${riderServiceUrl}/api/rider/internal/demo/seed`,
-    {
-      clusterKey,
-      latitude,
-      longitude,
-      city: area.city,
-      suburb: area.suburb,
-    },
-    {
-      headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "" },
-      timeout: 8000,
-    },
-  );
+  if (!riderServiceUrl) return Promise.resolve();
+  return axios
+    .post(
+      `${riderServiceUrl}/api/rider/internal/demo/seed`,
+      { clusterKey, latitude, longitude },
+      {
+        headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "" },
+        timeout: 8000,
+      },
+    )
+    .then(() => undefined);
 };
 
+const nearbyDemoCount = (latitude: number, longitude: number) =>
+  Restaurant.countDocuments({
+    type: "demo",
+    autoLocation: {
+      $geoWithin: {
+        $centerSphere: [[longitude, latitude], CLUSTER_DEDUPE_KM / EARTH_RADIUS_KM],
+      },
+    },
+  });
+
 const buildCluster = async (latitude: number, longitude: number) => {
-  const area = await fetchAreaContext(latitude, longitude);
   const clusterKey = clusterKeyOf(latitude, longitude);
-  for (const seed of DEMO_RESTAURANT_CATALOG) {
+  await ensureGeoIndexes();
+  const [area, existing] = await Promise.all([
+    fetchAreaContext(latitude, longitude, clusterKey),
+    Restaurant.find({ type: "demo", demoClusterKey: clusterKey }, { name: 1 })
+      .lean(),
+  ]);
+  const existingByName = new Map<string, mongoose.Types.ObjectId>(
+    existing.map((restaurant) => [restaurant.name, restaurant._id]),
+  );
+
+  const newDocs = DEMO_RESTAURANT_CATALOG.filter(
+    (seed) => !existingByName.has(seed.name),
+  ).map((seed) => {
     const point = destinationPoint(
       latitude,
       longitude,
       seed.bearingDeg,
       seed.distanceKm,
     );
-    const existing = await Restaurant.findOne({
-      type: "demo",
-      demoClusterKey: clusterKey,
+    return {
+      _id: new mongoose.Types.ObjectId(),
       name: seed.name,
-    }).lean();
-    if (existing) continue;
-    try {
-      const restaurant = await Restaurant.create({
-        name: seed.name,
-        description: seed.description,
-        image: seed.image,
-        phone: seed.phone,
-        ownerId: `demo:${clusterKey}`,
-        isVerified: true,
-        isOpen: true,
-        type: "demo",
-        demoClusterKey: clusterKey,
-        autoLocation: {
-          type: "Point",
-          coordinates: [point.longitude, point.latitude],
-          formattedAddress: composeAddress(
-            seed.addressLine,
-            area,
-            point.latitude,
-            point.longitude,
-          ),
-        },
-      });
-      await MenuItems.insertMany(
-        seed.menu.map((item) => ({
-          ...item,
-          restaurantId: restaurant._id,
-          isAvailable: true,
-          type: "demo",
-          demoClusterKey: clusterKey,
-        })),
-      );
-    } catch (error) {
-      console.log(`demo seed skipped for ${seed.name}`, error);
+      description: seed.description,
+      image: seed.image,
+      phone: seed.phone,
+      ownerId: `demo:${clusterKey}`,
+      isVerified: true,
+      isOpen: true,
+      type: "demo" as const,
+      demoClusterKey: clusterKey,
+      autoLocation: {
+        type: "Point" as const,
+        coordinates: [point.longitude, point.latitude],
+        formattedAddress: composeAddress(
+          seed.addressLine,
+          area,
+          point.latitude,
+          point.longitude,
+        ),
+      },
+    };
+  });
+
+  if (newDocs.length > 0) {
+    await Restaurant.insertMany(newDocs, { ordered: false }).catch((error) => {
+      console.log("demo restaurant insert skipped", error);
+    });
+    const inserted = await Restaurant.find(
+      { _id: { $in: newDocs.map((doc) => doc._id) } },
+      { name: 1 },
+    ).lean();
+    for (const doc of inserted) {
+      existingByName.set(doc.name, doc._id);
     }
   }
-  try {
-    await seedRidersForCluster(clusterKey, latitude, longitude, area);
-  } catch (error) {
-    console.log("demo rider seeding skipped", error);
+
+  const menuCounts = await MenuItems.aggregate([
+    { $match: { demoClusterKey: clusterKey } },
+    { $group: { _id: "$restaurantId", count: { $sum: 1 } } },
+  ]);
+  const menuCountByRestaurant = new Map(
+    menuCounts.map((entry) => [String(entry._id), entry.count]),
+  );
+
+  const menuDocs = DEMO_RESTAURANT_CATALOG.flatMap((seed) => {
+    const restaurantId = existingByName.get(seed.name);
+    if (!restaurantId) return [];
+    if ((menuCountByRestaurant.get(String(restaurantId)) ?? 0) > 0) return [];
+    return seed.menu.map((item) => ({
+      ...item,
+      restaurantId,
+      isAvailable: true,
+      type: "demo" as const,
+      demoClusterKey: clusterKey,
+    }));
+  });
+  if (menuDocs.length > 0) {
+    await MenuItems.insertMany(menuDocs, { ordered: false }).catch((error) => {
+      console.log("demo menu insert skipped", error);
+    });
   }
+
+  void seedRidersForCluster(clusterKey, latitude, longitude).catch((error) => {
+    console.log("demo rider seeding skipped", error);
+  });
 };
 
 const inFlightSeeds = new Map<string, Promise<void>>();
@@ -138,29 +185,18 @@ export const seedDemoCluster = async (
   latitude: number,
   longitude: number,
 ): Promise<void> => {
-  const nearbyDemo = await Restaurant.findOne({
-    type: "demo",
-    autoLocation: {
-      $near: {
-        $geometry: {
-          type: "Point",
-          coordinates: [longitude, latitude],
-        },
-        $maxDistance: CLUSTER_DEDUPE_KM * 1000,
-      },
-    },
-  }).lean();
-  if (nearbyDemo) return;
-
   const clusterKey = clusterKeyOf(latitude, longitude);
   const pending = inFlightSeeds.get(clusterKey);
   if (pending) {
     await pending.catch(() => undefined);
     return;
   }
-  const task = buildCluster(latitude, longitude).finally(() =>
-    inFlightSeeds.delete(clusterKey),
-  );
+  const nearbyDemo = await nearbyDemoCount(latitude, longitude);
+  if (nearbyDemo >= DEMO_RESTAURANT_CATALOG.length) return;
+
+  const task = buildCluster(latitude, longitude).finally(() => {
+    inFlightSeeds.delete(clusterKey);
+  });
   inFlightSeeds.set(clusterKey, task);
   await task.catch(() => undefined);
 };

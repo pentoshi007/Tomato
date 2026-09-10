@@ -72,7 +72,7 @@ Complete reference: [docs/deployment.md](docs/deployment.md). Summary:
 
 1. Push to `main` (or run the workflow manually) so the images land on Docker Hub.
 2. On Render, redeploy each service manually — the new images are pulled by tag (`:latest` or the pinned short SHA).
-3. **Add `RIDER_SERVICE_URL` to the restaurant service** on Render, pointing at the rider service's Render URL. Without it, demo restaurants and menus still seed, but demo riders are skipped and demo orders stall at `ready_for_rider`.
+3. **Add `RIDER_SERVICE_URL` to the restaurant service** on Render, pointing at the rider service's Render URL. Recommended for prompt rider seeding; if it's missing or the rider service is cold, the rider service backfills cluster riders on the first demo `ORDER_READY_FOR_RIDER` event, so demo orders still complete.
 4. Verify `INTERNAL_SERVICE_KEY` is identical on restaurant, rider, realtime and utils — the rider-seed endpoint and all internal emit/status calls are gated on it.
 5. All six services now answer `GET /` with `ok` — usable as a Render health check path.
 6. No changes to MongoDB Atlas, RabbitMQ, Stripe or Razorpay configuration.

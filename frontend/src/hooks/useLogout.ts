@@ -21,6 +21,7 @@ export const useLogout = () => {
         }
       }
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setUser(null);
       setIsAuth(false);
       toast.success("Logged out successfully");

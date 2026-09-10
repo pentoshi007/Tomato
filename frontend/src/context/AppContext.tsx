@@ -31,13 +31,31 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [quantity, setQuantity] = useState(0);
   const locationRequestStartedRef = useRef(false);
 
-  async function fetchUser() {
+  const readCachedUser = (): User | null => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setIsAuth(false);
-        return;
-      }
+      const raw = localStorage.getItem("user");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as User | null;
+      return parsed && typeof parsed === "object" && parsed._id ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  async function fetchUser() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setIsAuth(false);
+      setLoading(false);
+      return;
+    }
+    const cachedUser = readCachedUser();
+    if (cachedUser) {
+      setUser(cachedUser);
+      setIsAuth(true);
+      setLoading(false);
+    }
+    try {
       const { data } = await axios.get(`${AuthService}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -45,7 +63,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       });
       setUser(data.user);
       setIsAuth(true);
+      localStorage.setItem("user", JSON.stringify(data.user));
     } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsAuth(false);
+      }
       console.log(error);
     } finally {
       setLoading(false);
@@ -66,6 +93,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         axios
           .get(`${utilsService}/api/geocode/reverse`, {
             params: { lat, lon: lng },
+            timeout: 3000,
           })
           .then(({ data }) => {
             setLocation({
@@ -100,7 +128,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         try {
           const { data } = await axios.get(
             `${utilsService}/api/geocode/reverse`,
-            { params: { lat: latitude, lon: longitude } },
+            { params: { lat: latitude, lon: longitude }, timeout: 3000 },
           );
           setLocation({
             latitude,

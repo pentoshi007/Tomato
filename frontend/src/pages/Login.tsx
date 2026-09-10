@@ -29,6 +29,7 @@ const Login = () => {
         code,
       });
       localStorage.setItem("token", result.data.token);
+      localStorage.setItem("user", JSON.stringify(result.data.user));
       toast.success(result.data.message);
       setLoading(false);
       setUser(result.data.user);

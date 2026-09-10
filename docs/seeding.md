@@ -70,7 +70,14 @@ Restaurant seeding delegates to the rider service: `POST /api/rider/internal/dem
 - `isAvailable: false`, `isVerified: true`, `type: "demo"`, `demoClusterKey`
 - The real-rider order-offer query filters `type: "normal"`, so demo riders can never receive a real order offer
 
-If `RIDER_SERVICE_URL` is not configured on the restaurant service, rider seeding is skipped (restaurants and menus still seed) — demo orders then stall at `ready_for_rider`.
+Rider seeding is fire-and-forget from the restaurant service (it never blocks or fails the nearby response). If `RIDER_SERVICE_URL` is missing or the rider service is cold when a cluster seeds, the rider service backfills the cluster's riders on the next demo `ORDER_READY_FOR_RIDER` event before claiming a rider — demo orders no longer stall at `ready_for_rider`.
+
+## Robustness and performance
+
+- **Self-healing geo indexes**: Mongoose builds indexes once per boot. If the database is dropped while services run (collections recreated without the 2dsphere index), every `$near` query would 500 permanently. The restaurant and rider services now detect `unable to find index for $geoNear query` errors, rebuild indexes once (`createIndexes`), and retry the query — verified by dropping the live database mid-run and serving the next nearby request successfully without a restart.
+- **Index-independent dedupe**: the seed-dedupe check uses `$geoWithin`/`$centerSphere`, which works even when the 2dsphere index is missing, so seeding never wedges behind a broken index.
+- **Fast seeding**: one reverse-geocode (3s timeout, cached per cluster) and batched `insertMany` calls for restaurants and menus; a fresh cluster seeds in well under a second of DB time (≈0.8–1.3s end-to-end including geocode), and repeat nearby calls on an existing cluster are single-digit milliseconds.
+- **Idempotent everything**: restaurant, menu, and rider seeding are all check-then-batch upserts keyed on `demoClusterKey` — reruns seed nothing, concurrent seeds dedupe via the unique partial index.
 
 ## Removal
 
