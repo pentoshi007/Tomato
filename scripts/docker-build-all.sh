@@ -49,6 +49,7 @@ run_parallel() {
 
 build_image() {
   docker build \
+    --platform linux/amd64 \
     -t "$DOCKER_USER/$IMAGE_PREFIX$1:$SHA" \
     -t "$DOCKER_USER/$IMAGE_PREFIX$1:latest" \
     "services/$1"
