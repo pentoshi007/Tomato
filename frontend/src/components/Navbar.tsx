@@ -1,8 +1,9 @@
 import { useAppContext } from "../context/AppContext";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { BiMapPin, BiSearch } from "react-icons/bi";
+import { BiMapPin, BiSearch, BiReceipt } from "react-icons/bi";
 import { Logo } from "./ui/Logo";
+import DemoChip from "../demo/DemoChip";
 
 const CartButton = ({ quantity }: { quantity: number }) => (
   <Link
@@ -40,20 +41,23 @@ const Navbar = () => {
     currLocation.pathname === "/select-role";
   const isHomePage = currLocation.pathname === "/";
   const [searchParams, setSearchParams] = useSearchParams();
+  const urlSearch = searchParams.get("search") ?? "";
 
-  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [search, setSearch] = useState(urlSearch);
 
   useEffect(() => {
-    if (isAuthScreen) return;
+    setSearch(urlSearch);
+  }, [urlSearch]);
+
+  useEffect(() => {
+    if (!isHomePage) return;
+    const next = search.trim();
+    if (next === urlSearch) return;
     const timer = setTimeout(() => {
-      if (search.trim() !== "") {
-        setSearchParams({ search: search.trim() });
-      } else {
-        setSearchParams({});
-      }
-    }, 500);
+      setSearchParams(next ? { search: next } : {}, { replace: true });
+    }, 400);
     return () => clearTimeout(timer);
-  }, [search, setSearchParams, isAuthScreen]);
+  }, [search, urlSearch, isHomePage, setSearchParams]);
 
   // Auth screens are full-bleed branded experiences — no chrome.
   if (isAuthScreen) {
@@ -83,7 +87,7 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b-2 border-ink bg-cream/95 backdrop-blur-[2px]">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-3">
         <Link to="/" aria-label="Tomato home" className="shrink-0">
           <Logo size={34} />
         </Link>
@@ -92,13 +96,23 @@ const Navbar = () => {
           <div className="hidden max-w-lg flex-1 md:block">{searchBar}</div>
         )}
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+          <DemoChip />
+          {isAuth && (
+            <Link
+              to="/orders"
+              aria-label="Your orders"
+              className="btn-secondary !rounded-full !p-2.5"
+            >
+              <BiReceipt className="h-5 w-5" />
+            </Link>
+          )}
           <CartButton quantity={quantity} />
           {isAuth ? (
             <Link
               to="/account"
               aria-label="Your account"
-              className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink bg-tomato text-sm font-black text-white shadow-pop-xs transition-transform hover:-translate-0.5 hover:shadow-pop-sm"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-tomato text-sm font-black text-white shadow-pop-xs transition-transform hover:-translate-0.5 hover:shadow-pop-sm"
             >
               {user?.name?.charAt(0).toUpperCase() ?? "?"}
             </Link>
@@ -109,9 +123,7 @@ const Navbar = () => {
           )}
         </div>
       </div>
-      {isHomePage && (
-        <div className="px-4 pb-3 md:hidden">{searchBar}</div>
-      )}
+      {isHomePage && <div className="px-4 pb-3 md:hidden">{searchBar}</div>}
     </header>
   );
 };

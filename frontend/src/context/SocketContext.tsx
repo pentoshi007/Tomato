@@ -1,6 +1,7 @@
 import {
   useEffect,
   useCallback,
+  useMemo,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -8,6 +9,8 @@ import { io, type Socket } from "socket.io-client";
 import { useAppContext } from "./AppContext";
 import { realtimeService } from "../config";
 import { SocketContext } from "./socketContext";
+import { demoSocketAsClient } from "../demo/socket";
+import { useDemo } from "../demo/useDemo";
 
 // ---------------------------------------------------------------------------
 // Module-level socket store — lets us update the socket without calling
@@ -30,6 +33,7 @@ const notifyListeners = () => _listeners.forEach((l) => l());
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const { isAuth } = useAppContext();
+  const { active: demoActive } = useDemo();
 
   // Reactive read from the external store — no useState needed
   const socket = useSyncExternalStore(
@@ -66,13 +70,13 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!isAuth) {
+    if (!isAuth || demoActive) {
       destroySocket();
       return;
     }
     createSocket();
     return destroySocket;
-  }, [isAuth, createSocket, destroySocket]);
+  }, [isAuth, demoActive, createSocket, destroySocket]);
 
   // Call after saving an updated token to localStorage so the socket
   // reconnects and joins the correct rooms (e.g. restaurant:<id>).
@@ -81,9 +85,15 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     createSocket();
   }, [isAuth, createSocket]);
 
+  const value = useMemo(
+    () =>
+      demoActive
+        ? { socket: demoSocketAsClient(), reconnect: () => {} }
+        : { socket, reconnect },
+    [demoActive, socket, reconnect],
+  );
+
   return (
-    <SocketContext.Provider value={{ socket, reconnect }}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
   );
 };

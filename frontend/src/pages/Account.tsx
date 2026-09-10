@@ -1,21 +1,14 @@
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import { BiMapPin, BiReceipt, BiLogOut, BiChevronRight } from "react-icons/bi";
 import { Logo } from "../components/ui/Logo";
+import { useLogout } from "../hooks/useLogout";
 
 const Account = () => {
-  const { user, setUser, setIsAuth } = useAppContext();
+  const { user } = useAppContext();
   const firstLetter = user?.name?.charAt(0).toUpperCase();
   const navigate = useNavigate();
-
-  const logoutHandler = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-    toast.success("Logged out successfully");
-    setUser(null);
-    setIsAuth(false);
-  };
+  const logout = useLogout();
 
   const rows = [
     {
@@ -71,7 +64,7 @@ const Account = () => {
             </button>
           ))}
           <button
-            onClick={logoutHandler}
+            onClick={() => void logout()}
             className="flex w-full cursor-pointer items-center gap-4 p-5 text-left transition-colors hover:bg-blush"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-tomato text-white">

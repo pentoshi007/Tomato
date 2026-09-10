@@ -3,8 +3,7 @@ import type { IRestaurant } from "../types";
 import { useState } from "react";
 import { restaurantService } from "../config";
 import toast from "react-hot-toast";
-import { BiMapPin, BiEdit, BiCheck, BiX, BiLogOut } from "react-icons/bi";
-import { useAppContext } from "../context/AppContext";
+import { BiMapPin, BiEdit, BiCheck, BiX } from "react-icons/bi";
 import { FoodImage } from "./ui/FoodImage";
 
 interface props {
@@ -23,7 +22,6 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
   const [description, setDescription] = useState(restaurant.description || "");
   const [isOpen, setIsOpen] = useState(restaurant.isOpen);
   const [loading, setLoading] = useState(false);
-  const { setIsAuth, setUser } = useAppContext();
 
   const toggleOpenStatus = async () => {
     try {
@@ -58,23 +56,6 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
       toast.error("Problem in updating restaurant");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const logoutHandler = async () => {
-    try {
-      await axios.put(
-        `${restaurantService}/api/restaurant/status`,
-        { status: false },
-        { headers: authHeaders() },
-      );
-      localStorage.removeItem("token");
-      setIsAuth(false);
-      setUser(null);
-      toast.success("Logged out successfully");
-    } catch (error) {
-      console.log(error);
-      toast.error("Problem in logging out");
     }
   };
 
@@ -167,21 +148,13 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
                 </button>
               </>
             ) : (
-              <>
-                <button
-                  onClick={toggleOpenStatus}
-                  disabled={loading}
-                  className={`${isOpen ? "btn-danger-ghost" : "btn-primary"} !py-2 !text-xs`}
-                >
-                  {isOpen ? "Close restaurant" : "Open restaurant"}
-                </button>
-                <button
-                  onClick={logoutHandler}
-                  className="btn-secondary !py-2 !text-xs"
-                >
-                  <BiLogOut className="h-4 w-4" /> Logout
-                </button>
-              </>
+              <button
+                onClick={toggleOpenStatus}
+                disabled={loading}
+                className={`${isOpen ? "btn-danger-ghost" : "btn-primary"} !py-2 !text-xs`}
+              >
+                {isOpen ? "Close restaurant" : "Open restaurant"}
+              </button>
             )}
           </div>
         )}

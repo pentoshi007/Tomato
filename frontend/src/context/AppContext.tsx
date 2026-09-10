@@ -1,6 +1,14 @@
 import axios from "axios";
-import { createContext, useState, useEffect, useContext, useRef } from "react";
+import {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useMemo,
+  useRef,
+} from "react";
 import { AuthService, restaurantService, utilsService } from "../config";
+import { useDemo } from "../demo/useDemo";
 import type { AppContextType, ICart, Location } from "../types";
 import type { User } from "../types";
 import toast from "react-hot-toast";
@@ -11,6 +19,7 @@ interface AppProviderProps {
 }
 
 export const AppProvider = ({ children }: AppProviderProps) => {
+  const demo = useDemo();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuth, setIsAuth] = useState(false);
@@ -128,8 +137,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     requestLocation();
   }, []);
 
+  const activeUser = useMemo(
+    () =>
+      demo.active && demo.role && user
+        ? { ...user, role: demo.role as string }
+        : user,
+    [demo.active, demo.role, user],
+  );
+  const activeLocation = demo.active ? demo.origin : location;
+  const activeCity = demo.active ? demo.city : city;
+
   const fetchMyCart = async () => {
-    if (!user || user.role !== "customer") {
+    if (!activeUser || activeUser.role !== "customer") {
       return;
     }
     try {
@@ -151,20 +170,20 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   useEffect(() => {
     fetchMyCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [activeUser]);
 
   return (
     <AppContext.Provider
       value={{
-        user,
+        user: activeUser,
         loading,
         isAuth,
         setUser,
         setIsAuth,
         setLoading,
-        location,
+        location: activeLocation,
         loadingLocation,
-        city,
+        city: activeCity,
         retryLocation: requestLocation,
         cart,
         subTotal,

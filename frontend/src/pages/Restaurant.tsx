@@ -12,6 +12,8 @@ import type { IMenuItem } from "../types";
 import RestaurantOrders from "../components/RestaurantOrders.tsx";
 import { Logo } from "../components/ui/Logo";
 import { PageLoader } from "../components/ui/primitives";
+import LogoutButton from "../components/LogoutButton";
+import DemoChip from "../demo/DemoChip";
 
 const TABS: { key: SellerTabs; label: string }[] = [
   { key: "menu", label: "Menu" },
@@ -83,6 +85,15 @@ export const Restaurant = () => {
     }
   }, [restaurant]);
 
+  const closeRestaurant = async () => {
+    if (!restaurant?.isOpen) return;
+    await axios.put(
+      `${restaurantService}/api/restaurant/status`,
+      { status: false },
+      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
+    );
+  };
+
   if (loading) {
     return <PageLoader label="Opening your kitchen…" />;
   }
@@ -93,9 +104,15 @@ export const Restaurant = () => {
   return (
     <div className="min-h-screen bg-cream">
       <header className="sticky top-0 z-40 border-b-2 border-ink bg-cream/95 backdrop-blur-[2px]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
           <Logo size={32} />
-          <span className="chip bg-mustard">Seller kitchen</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <DemoChip />
+            <span className="chip hidden bg-mustard sm:inline-flex">
+              Seller kitchen
+            </span>
+            <LogoutButton before={closeRestaurant} />
+          </div>
         </div>
       </header>
 

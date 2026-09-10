@@ -67,3 +67,4 @@ pids/
 # Testing
 .jest/
 opencode.json
+.clai

@@ -11,6 +11,8 @@ import RiderOrderMap from "../components/RiderOrderMap";
 import { Logo } from "../components/ui/Logo";
 import { PageLoader, Spinner } from "../components/ui/primitives";
 import { Scooter, Sparkle } from "../components/ui/illustrations";
+import LogoutButton from "../components/LogoutButton";
+import DemoChip from "../demo/DemoChip";
 import {
   BiUpload,
   BiBell,
@@ -130,9 +132,15 @@ const RiderRegistrationForm = ({
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b-2 border-ink">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
           <Logo size={32} />
-          <span className="chip bg-skywash">Rider hub</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <DemoChip />
+            <span className="chip hidden bg-skywash sm:inline-flex">
+              Rider hub
+            </span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
@@ -488,9 +496,15 @@ const RiderDashboard = () => {
   return (
     <div className="min-h-screen bg-cream">
       <header className="sticky top-0 z-40 border-b-2 border-ink bg-cream/95 backdrop-blur-[2px]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
           <Logo size={32} />
-          <span className="chip bg-skywash">Rider hub</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <DemoChip />
+            <span className="chip hidden bg-skywash sm:inline-flex">
+              Rider hub
+            </span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 

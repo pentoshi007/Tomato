@@ -252,7 +252,7 @@ const Cart = () => {
       </div>
 
       {/* Sticky checkout bar — mobile */}
-      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-paper p-3 md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-paper p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <button
           onClick={checkout}
           disabled={!restaurant.isOpen}

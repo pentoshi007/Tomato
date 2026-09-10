@@ -7,6 +7,8 @@ import type { IRider, IRestaurant } from "../types";
 import { Logo } from "../components/ui/Logo";
 import { Skeleton } from "../components/ui/primitives";
 import { Scooter } from "../components/ui/illustrations";
+import LogoutButton from "../components/LogoutButton";
+import DemoChip from "../demo/DemoChip";
 
 type ReviewTarget = "restaurant" | "rider";
 
@@ -195,9 +197,15 @@ const Admin = () => {
   return (
     <main className="min-h-screen bg-cream">
       <header className="border-b-2 border-ink bg-cream">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
           <Logo size={32} />
-          <span className="chip bg-blush">Admin portal</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <DemoChip />
+            <span className="chip hidden bg-blush sm:inline-flex">
+              Admin portal
+            </span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 

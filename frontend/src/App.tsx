@@ -10,9 +10,10 @@ import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/protectedRoute";
 import PublicRoute from "./components/publicRoute";
 import Navbar from "./components/Navbar";
-import MobileNav from "./components/MobileNav";
 import { useAppContext } from "./context/AppContext";
 import { PageLoader } from "./components/ui/primitives";
+import DemoLayer from "./demo/DemoLayer";
+import { useDemo } from "./demo/useDemo";
 
 const Home = lazy(() => import("./pages/Home"));
 const Login = lazy(() => import("./pages/Login"));
@@ -47,75 +48,86 @@ const toasterOptions = {
   },
 };
 
+const CustomerApp = () => (
+  <BrowserRouter>
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main className="flex-1">
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/restaurant/:id" element={<RestaurantPage />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/address" element={<AddAddressPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/order/:orderId" element={<OrderPage />} />
+              <Route
+                path="/paymentsuccess/:paymentId"
+                element={<PaymentSuccess />}
+              />
+              <Route
+                path="/paymentsuccess"
+                element={<PaymentSuccessRedirect />}
+              />
+              <Route path="/order-success" element={<OrderSuccess />} />
+            </Route>
+            <Route element={<PublicRoute />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/select-role" element={<SelectRole />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </main>
+    </div>
+  </BrowserRouter>
+);
+
+const RoleApp = ({ role }: { role?: string }) => {
+  if (role === "seller") {
+    return (
+      <Suspense fallback={<PageLoader label="Opening your kitchen…" />}>
+        <Restaurant />
+      </Suspense>
+    );
+  }
+  if (role === "rider") {
+    return (
+      <Suspense fallback={<PageLoader label="Starting your engine…" />}>
+        <RiderDashboard />
+      </Suspense>
+    );
+  }
+  if (role === "admin") {
+    return (
+      <Suspense fallback={<PageLoader label="Loading console…" />}>
+        <Admin />
+      </Suspense>
+    );
+  }
+  return <CustomerApp />;
+};
+
 const App = () => {
   const { user, loading } = useAppContext();
+  const { active: demoActive, role: demoRole } = useDemo();
+
   if (loading) {
     return <PageLoader />;
   }
 
-  if (user?.role === "seller") {
-    return (
-      <Suspense fallback={<PageLoader label="Opening your kitchen…" />}>
-        <Restaurant />
-        <Toaster {...toasterOptions} />
-      </Suspense>
-    );
-  }
-  if (user?.role === "rider") {
-    return (
-      <Suspense fallback={<PageLoader label="Starting your engine…" />}>
-        <RiderDashboard />
-        <Toaster {...toasterOptions} />
-      </Suspense>
-    );
-  }
-  if (user?.role === "admin") {
-    return (
-      <Suspense fallback={<PageLoader label="Loading console…" />}>
-        <Admin />
-        <Toaster {...toasterOptions} />
-      </Suspense>
-    );
-  }
-
   return (
-    <BrowserRouter>
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <main className="flex-1 pb-24 md:pb-0">
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/restaurant/:id" element={<RestaurantPage />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/address" element={<AddAddressPage />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/order/:orderId" element={<OrderPage />} />
-                <Route
-                  path="/paymentsuccess/:paymentId"
-                  element={<PaymentSuccess />}
-                />
-                <Route
-                  path="/paymentsuccess"
-                  element={<PaymentSuccessRedirect />}
-                />
-                <Route path="/order-success" element={<OrderSuccess />} />
-              </Route>
-              <Route element={<PublicRoute />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/select-role" element={<SelectRole />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <MobileNav />
-        <Toaster {...toasterOptions} />
-      </div>
-    </BrowserRouter>
+    <>
+      <RoleApp
+        key={demoActive ? `demo-${demoRole}` : "live"}
+        role={user?.role}
+      />
+      <DemoLayer />
+      <Toaster {...toasterOptions} />
+    </>
   );
 };
 

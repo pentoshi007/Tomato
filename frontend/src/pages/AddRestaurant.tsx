@@ -6,6 +6,8 @@ import { restaurantService } from "../config";
 import { BiUpload, BiMapPin, BiStore } from "react-icons/bi";
 import { Logo } from "../components/ui/Logo";
 import { Spinner } from "../components/ui/primitives";
+import LogoutButton from "../components/LogoutButton";
+import DemoChip from "../demo/DemoChip";
 
 interface props {
   fetchMyRestaurant: () => Promise<void>;
@@ -57,9 +59,15 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b-2 border-ink bg-cream">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
           <Logo size={32} />
-          <span className="chip bg-mustard">Seller kitchen</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <DemoChip />
+            <span className="chip hidden bg-mustard sm:inline-flex">
+              Seller kitchen
+            </span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
