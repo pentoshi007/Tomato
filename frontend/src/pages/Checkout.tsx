@@ -300,7 +300,6 @@ export default function CheckoutPage() {
     demoPaymentRef.current = {
       paymentId: order.order?.paymentId ?? `demo-pay-${order.orderId}`,
     };
-    await fetchMyCart();
     return true;
   };
 
@@ -531,6 +530,7 @@ export default function CheckoutPage() {
             if (paid && demoPaymentRef.current) {
               toast.success("Payment successful");
               navigate(`/paymentsuccess/${demoPaymentRef.current.paymentId}`);
+              fetchMyCart();
             }
           }}
         />

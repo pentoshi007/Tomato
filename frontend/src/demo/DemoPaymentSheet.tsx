@@ -54,6 +54,10 @@ const DemoPaymentSheet = ({
   const [method, setMethod] = useState("upi");
   const timerRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLInputElement | null>(null);
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  });
 
   useEffect(() => {
     if (cardRef.current) cardRef.current.focus();
@@ -61,7 +65,8 @@ const DemoPaymentSheet = ({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && phase !== "processing") onDone(false);
+      if (event.key === "Escape" && phase !== "processing")
+        onDoneRef.current(false);
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -69,16 +74,25 @@ const DemoPaymentSheet = ({
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     };
-  }, [phase, onDone]);
+  }, [phase]);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   const pay = async () => {
     setPhase("processing");
     const paid = await onPay();
     if (paid) {
       setPhase("success");
-      timerRef.current = window.setTimeout(() => onDone(true), 1400);
+      timerRef.current = window.setTimeout(
+        () => onDoneRef.current(true),
+        1400,
+      );
     } else {
       setPhase("failed");
     }
