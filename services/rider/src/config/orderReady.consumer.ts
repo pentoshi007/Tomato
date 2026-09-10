@@ -3,6 +3,217 @@ import { getChannel } from "./rabbitmq.js";
 
 import { Rider } from "../model/Rider.js";
 
+type GeoPoint = { type: string; coordinates: [number, number] };
+
+const emitInternal = async (event: string, room: string, payload: unknown) => {
+  await axios.post(
+    `${process.env.REALTIME_SERVICE_URL}/api/internal/emit`,
+    { event, room, payload },
+    { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "" } },
+  );
+};
+
+const callRestaurantService = async (
+  path: string,
+  body: Record<string, unknown>,
+) => {
+  const { data } = await axios.put(
+    `${process.env.RESTAURANT_SERVICE}${path}`,
+    body,
+    { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "" } },
+  );
+  return data;
+};
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const PICKUP_TRAVEL_MS_PER_KM = 22_000;
+const PICKUP_TRAVEL_MIN_MS = 15_000;
+const DELIVERY_TRAVEL_MS_PER_KM = 26_000;
+const DELIVERY_TRAVEL_MIN_MS = 20_000;
+const LOCATION_PING_MS = 3_000;
+
+const movingTo = (
+  from: [number, number],
+  to: [number, number],
+  totalMs: number,
+  onPing: (point: [number, number]) => Promise<void>,
+) =>
+  new Promise<void>((resolve) => {
+    const startedAt = Date.now();
+    const tick = async () => {
+      const ratio = Math.min(1, (Date.now() - startedAt) / totalMs);
+      const point: [number, number] = [
+        from[0] + (to[0] - from[0]) * ratio,
+        from[1] + (to[1] - from[1]) * ratio,
+      ];
+      await onPing(point);
+      if (ratio >= 1) {
+        resolve();
+        return;
+      }
+      setTimeout(() => void tick(), LOCATION_PING_MS);
+    };
+    void tick();
+  });
+
+const claimDemoRider = async (
+  clusterKey: string | undefined,
+  excludeRiderIds: string[],
+) => {
+  const filter: Record<string, unknown> = {
+    type: "demo",
+    isAvailable: false,
+    isVerified: true,
+  };
+  if (clusterKey) filter.demoClusterKey = clusterKey;
+  if (excludeRiderIds.length > 0) filter._id = { $nin: excludeRiderIds };
+  return Rider.findOneAndUpdate(
+    filter,
+    { $set: { lastActiveAt: new Date() } },
+    { sort: { lastActiveAt: 1 }, returnDocument: "after" },
+  );
+};
+
+const runDemoDelivery = async (
+  orderId: string,
+  userId: string,
+  clusterKey: string | undefined,
+  restaurantLocation: GeoPoint,
+  deliveryLocation: { latitude: number; longitude: number },
+  excludeRiderIds: string[],
+) => {
+  const triedRiderIds: string[] = [];
+  let rider = await claimDemoRider(clusterKey, [
+    ...excludeRiderIds,
+    ...triedRiderIds,
+  ]);
+  while (rider) {
+    const assigned = await callRestaurantService("/api/order/assign/rider", {
+      orderId,
+      riderId: rider._id.toString(),
+      riderName: rider.name || `Rider ${rider.phoneNumber.slice(-4)}`,
+      riderPhone: rider.phoneNumber,
+    }).catch((error) => {
+      console.log(`demo rider assignment failed for ${orderId}`, error);
+      return null;
+    });
+    if (assigned?.success) break;
+    triedRiderIds.push(rider._id.toString());
+    rider = await claimDemoRider(clusterKey, [...excludeRiderIds, ...triedRiderIds]);
+  }
+  if (!rider) {
+    console.log(`no demo rider available for ${orderId}`);
+    return;
+  }
+
+  const riderStart: [number, number] = [
+    rider.location.coordinates[1],
+    rider.location.coordinates[0],
+  ];
+  const pickupPoint: [number, number] = [
+    restaurantLocation.coordinates[1],
+    restaurantLocation.coordinates[0],
+  ];
+  const deliveryPoint: [number, number] = [
+    deliveryLocation.latitude,
+    deliveryLocation.longitude,
+  ];
+
+  const pickupDistanceKm = Math.hypot(
+    (pickupPoint[0] - riderStart[0]) * 111,
+    (pickupPoint[1] - riderStart[1]) * 111,
+  );
+  const pickupMs = Math.max(
+    PICKUP_TRAVEL_MIN_MS,
+    pickupDistanceKm * PICKUP_TRAVEL_MS_PER_KM,
+  );
+  await movingTo(riderStart, pickupPoint, pickupMs, async (point) => {
+    await emitInternal("rider:location", `user:${userId}`, {
+      orderId,
+      latitude: point[0],
+      longitude: point[1],
+    }).catch(() => undefined);
+  });
+
+  const picked = await callRestaurantService(
+    "/api/order/update/status/rider",
+    { orderId },
+  ).catch(() => null);
+  if (!picked?.success) return;
+
+  const deliveryDistanceKm = Math.hypot(
+    (deliveryPoint[0] - pickupPoint[0]) * 111,
+    (deliveryPoint[1] - pickupPoint[1]) * 111,
+  );
+  const deliveryMs = Math.max(
+    DELIVERY_TRAVEL_MIN_MS,
+    deliveryDistanceKm * DELIVERY_TRAVEL_MS_PER_KM,
+  );
+  await movingTo(pickupPoint, deliveryPoint, deliveryMs, async (point) => {
+    await emitInternal("rider:location", `user:${userId}`, {
+      orderId,
+      latitude: point[0],
+      longitude: point[1],
+    }).catch(() => undefined);
+  });
+
+  await delay(2_000);
+  await callRestaurantService("/api/order/update/status/rider", {
+    orderId,
+  }).catch(() => undefined);
+  await Rider.updateOne(
+    { _id: rider._id },
+    { lastActiveAt: new Date(), isAvailable: false },
+  );
+};
+
+const previousDemoOrderQuery = async (userId: string, before: Date) => {
+  try {
+    const { data } = await axios.get(
+      `${process.env.RESTAURANT_SERVICE}/api/order/demo/previous-rider`,
+      {
+        params: { userId, before: before.toISOString() },
+        headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "" },
+      },
+    );
+    return (data?.riderId as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export const startDemoDelivery = async (event: {
+  orderId: string;
+  restaurantId: string;
+  demoClusterKey?: string;
+  location: GeoPoint;
+  delivery?: { latitude: number; longitude: number; userId?: string };
+}) => {
+  if (!event.delivery || !event.delivery.userId) {
+    console.log(`demo delivery skipped for ${event.orderId}: no delivery info`);
+    return;
+  }
+  const previousRiderId = await previousDemoOrderQuery(
+    event.delivery.userId,
+    new Date(),
+  );
+  await runDemoDelivery(
+    event.orderId,
+    event.delivery.userId,
+    event.demoClusterKey,
+    event.location,
+    {
+      latitude: event.delivery.latitude,
+      longitude: event.delivery.longitude,
+    },
+    previousRiderId ? [previousRiderId] : [],
+  ).catch((error) =>
+    console.log(`demo delivery failed for ${event.orderId}`, error),
+  );
+};
+
 export const startOrderReadyConsumer = async () => {
   const channel = await getChannel();
   console.log(
@@ -11,24 +222,28 @@ export const startOrderReadyConsumer = async () => {
   channel?.consume(process.env.ORDER_READY_QUEUE!, async (message) => {
     if (message) {
       try {
-        console.log("Message received " + message.content.toString());
         const event = JSON.parse(message.content.toString());
-        console.log("Event type: " + event.type);
-        if (event.type === "ORDER_READY_FOR_RIDER") {
-          console.log("Order ready for rider: " + event.data.orderId);
-          console.log("Restaurant ID: " + event.data.restaurantId);
-          console.log("Location: " + event.data.location);
-        }
         if (event.type !== "ORDER_READY_FOR_RIDER") {
-          console.log("Skipping non-order-ready-for-rider event");
           channel?.ack(message);
           return;
         }
-        const { orderId, restaurantId, location } = event.data;
+        const { orderId, restaurantId, location, demo, demoClusterKey, delivery } = event.data;
+        if (demo) {
+          await startDemoDelivery({
+            orderId,
+            restaurantId,
+            demoClusterKey,
+            location,
+            delivery,
+          });
+          channel?.ack(message);
+          return;
+        }
         console.log("Searching for available rider near :" + location);
         const riders = await Rider.find({
           isAvailable: true,
           isVerified: true,
+          type: "normal",
           location: {
             $near: {
               $geometry: location,
@@ -44,28 +259,11 @@ export const startOrderReadyConsumer = async () => {
           return;
         }
         for (const rider of riders) {
-          console.log("Assigning order to rider: " + rider.userId);
           try {
-            await axios.post(
-              `${process.env.REALTIME_SERVICE_URL}/api/internal/emit`,
-              {
-                event: "order:available",
-                room: `user:${rider.userId}`,
-                payload: { orderId: orderId, restaurantId: restaurantId },
-              },
-              {
-                headers: {
-                  "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
-                },
-              },
-            );
-            console.log(
-              "Notified rider: " +
-                rider.userId +
-                " for order: " +
-                orderId +
-                " successfully",
-            );
+            await emitInternal("order:available", `user:${rider.userId}`, {
+              orderId: orderId,
+              restaurantId: restaurantId,
+            });
           } catch (error) {
             console.error(
               "Error notifying rider: " +
@@ -78,11 +276,9 @@ export const startOrderReadyConsumer = async () => {
           }
         }
         channel?.ack(message);
-        console.log("Message acknowledged successfully");
       } catch (error) {
         console.error("Order ready consumer error: " + error);
         channel?.ack(message);
-        console.log("Message acknowledged successfully");
       }
     }
   });

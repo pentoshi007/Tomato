@@ -6,6 +6,8 @@ export interface IMenuItems extends Document {
   price: number;
   image?: string;
   isAvailable: boolean;
+  type: "normal" | "demo";
+  demoClusterKey?: string;
   restaurantId: mongoose.Schema.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -18,6 +20,8 @@ const menuSchema = new Schema<IMenuItems>(
     price: { type: Number, required: true, min: 0 },
     image: { type: String, required: false },
     isAvailable: { type: Boolean, default: true },
+    type: { type: String, enum: ["normal", "demo"], default: "normal" },
+    demoClusterKey: { type: String },
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

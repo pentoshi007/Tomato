@@ -2,6 +2,7 @@ import TryCatch from "../middlewares/trycatch.js";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import Restaurant from "../models/Restaurant.js";
 import getBuffer from "../config/datauri.js";
+import { seedDemoCluster } from "../config/demoSeed.js";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
@@ -197,8 +198,8 @@ export const updateRestaurant = TryCatch(
 );
 
 export const getNearbyRestaurants = TryCatch(
-  async (req: Request, res: Response) => {
-    const { latitude, longitude, radius = 5000, search = "" } = req.query;
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { latitude, longitude, radius = 8000, search = "" } = req.query;
     if (!latitude || !longitude) {
       res.status(400).json({ message: "Latitude and longitude are required" });
       return;
@@ -226,11 +227,17 @@ export const getNearbyRestaurants = TryCatch(
           type: "Point",
           coordinates: [lng, lat],
         },
-        $maxDistance: radiusInMeters > 0 ? radiusInMeters : 5000,
+        $maxDistance: radiusInMeters > 0 ? radiusInMeters : 8000,
       },
     };
 
-    const restaurants = await Restaurant.find(query).sort({ isOpen: -1 });
+    const findNearby = () => Restaurant.find(query).sort({ isOpen: -1 });
+
+    let restaurants = await findNearby();
+    if (restaurants.length === 0 && !search && req.user?._id) {
+      await seedDemoCluster(lat, lng);
+      restaurants = await findNearby();
+    }
 
     res.status(200).json({
       success: true,

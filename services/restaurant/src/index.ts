@@ -9,12 +9,16 @@ import addressRoutes from "./routes/address.js";
 import orderRoutes from "./routes/order.js";
 import { connectToRabbitMQ } from "./config/rabbitmq.js";
 import { consumePaymentEvents } from "./config/payment.consumer.js";
+import { resumeDemoKitchens } from "./config/demoKitchen.js";
 dotenv.config();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.get("/", (_req, res) => {
+  res.send("ok");
+});
 app.use("/api/restaurant", restaurantRoutes);
 app.use("/api/item", itemRoutes);
 app.use("/api/cart", cartRoutes);
@@ -25,6 +29,9 @@ async function startServer() {
     await connectDB();
     await connectToRabbitMQ();
     await consumePaymentEvents();
+    await resumeDemoKitchens().catch((error) =>
+      console.log("demo kitchen resume failed", error),
+    );
     app.listen(process.env.PORT || 3002, () => {
       console.log(
         `Restaurant service is running on port ${process.env.PORT || 3002}`,

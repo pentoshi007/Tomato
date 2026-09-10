@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import type { Location } from "../types";
-import type { DemoRole, DemoSeed, InviteReason } from "./types";
+import type { DemoRole, DemoSeed } from "./types";
 
 export interface DemoContextValue {
   active: boolean;
@@ -8,8 +8,7 @@ export interface DemoContextValue {
   origin: Location | null;
   city: string | null;
   inviteOpen: boolean;
-  inviteReason: InviteReason | null;
-  openInvite: (reason?: InviteReason) => void;
+  openInvite: () => void;
   closeInvite: () => void;
   enter: (role: DemoRole, seed: DemoSeed) => void;
   exit: () => void;
@@ -21,7 +20,6 @@ export const DemoContext = createContext<DemoContextValue>({
   origin: null,
   city: null,
   inviteOpen: false,
-  inviteReason: null,
   openInvite: () => {},
   closeInvite: () => {},
   enter: () => {},

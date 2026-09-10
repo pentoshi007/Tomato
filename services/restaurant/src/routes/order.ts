@@ -9,6 +9,7 @@ import {
   assignRiderToOrder,
   getCurrentOrdersForRider,
   updateOrderStatusRider,
+  fetchPreviousDemoRider,
 } from "../controllers/order.js";
 import { isAuth, isSeller } from "../middlewares/isAuth.js";
 
@@ -28,5 +29,6 @@ router.put("/:orderId", isAuth, isSeller, updateOrderStatus);
 router.put("/assign/rider", assignRiderToOrder);
 router.get("/current/rider", getCurrentOrdersForRider);
 router.put("/update/status/rider", updateOrderStatusRider);
+router.get("/demo/previous-rider", fetchPreviousDemoRider);
 
 export default router;

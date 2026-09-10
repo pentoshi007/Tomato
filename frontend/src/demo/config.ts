@@ -1,7 +1,6 @@
 import type { OrderStatus } from "../types";
 
 export const DEMO_STORAGE_KEY = "tomato.demo.state.v1";
-export const DEMO_INVITE_KEY = "tomato.demo.invite.dismissed";
 
 export const DEMO_ORIGIN = {
   latitude: 28.5468576,

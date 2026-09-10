@@ -11,23 +11,16 @@ const toDemoRole = (role: string | undefined): DemoRole =>
 
 const DemoInviteDialog = () => {
   const { user, location } = useAppContext();
-  const { active, role, inviteReason, closeInvite, enter } = useDemo();
+  const { active, role, closeInvite, enter } = useDemo();
   const [selected, setSelected] = useState<DemoRole>(() =>
     toDemoRole(role ?? user?.role),
   );
 
-  const headline =
-    active
-      ? "Switch your demo persona"
-      : inviteReason === "no-restaurants"
-        ? "No kitchens near you yet"
-        : inviteReason === "empty-workspace"
-          ? "Nothing here yet — want a tour?"
-          : "Explore Tomato in demo mode";
+  const headline = active
+    ? "Switch your demo persona"
+    : "Explore Tomato in demo mode";
   const subline =
-    inviteReason === "no-restaurants"
-      ? "Tomato hasn't reached your neighbourhood yet. Jump into demo mode to browse sample kitchens, order food, run a restaurant and ride deliveries — every feature, no real money."
-      : "Explore Tomato with sample kitchens, dishes and orders that move on their own. Your real account stays untouched.";
+    "Explore Tomato with sample kitchens, dishes and orders that move on their own. Your real account stays untouched.";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

@@ -11,6 +11,9 @@ const port = process.env.PORT || 3006;
 
 app.use(cors());
 app.use(express.json());
+app.get("/", (_req, res) => {
+  res.send("ok");
+});
 
 app.use("/api/v1", adminRoutes);
 

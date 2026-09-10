@@ -15,6 +15,7 @@ import {
   emitRealtime,
 } from "../utils/realtime.js";
 import { publishEvent } from "../config/order.publisher.js";
+import { startDemoKitchen } from "../config/demoKitchen.js";
 import axios from "axios";
 
 // Centralized pricing config (single source of truth for the backend).
@@ -138,6 +139,7 @@ export const createOrder = TryCatch(
       paymentStatus: "pending",
       paymentId: "",
       status: "placed",
+      type: restaurant.type === "demo" ? "demo" : "normal",
       expiresAt,
     });
     await Cart.deleteMany({
@@ -295,6 +297,13 @@ export const updateOrderStatus = TryCatch(
         orderId: order._id.toString(),
         restaurantId: order.restaurantId.toString(),
         location: restaurant.autoLocation,
+        demo: restaurant.type === "demo",
+        demoClusterKey: restaurant.demoClusterKey,
+        delivery: {
+          latitude: order.deliveryAddress.latitude,
+          longitude: order.deliveryAddress.longitude,
+          userId: order.userId.toString(),
+        },
       });
       console.log("Event published to rider queue");
     }
@@ -423,6 +432,32 @@ export const assignRiderToOrder = TryCatch(async (req, res) => {
     order: orderUpdated,
     success: true,
   });
+});
+
+export const fetchPreviousDemoRider = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res
+      .status(401)
+      .json({ message: "Unauthorized, you are not an internal service" });
+  }
+  const { userId, before } = req.query;
+  if (!userId || !before) {
+    return res.status(400).json({ message: "userId and before are required" });
+  }
+  const beforeDate = new Date(String(before));
+  if (Number.isNaN(beforeDate.getTime())) {
+    return res.status(400).json({ message: "before must be a valid date" });
+  }
+  const order = await Order.findOne({
+    userId,
+    type: "demo",
+    riderId: { $ne: null },
+    createdAt: { $lt: beforeDate },
+  })
+    .sort({ createdAt: -1 })
+    .select("riderId")
+    .lean();
+  return res.status(200).json({ riderId: order?.riderId?.toString() ?? null });
 });
 
 export const getCurrentOrdersForRider = TryCatch(async (req, res) => {

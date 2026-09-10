@@ -1,5 +1,6 @@
 import { getChannel } from "./rabbitmq.js";
 import Order from "../models/Order.js";
+import { startDemoKitchen } from "./demoKitchen.js";
 import {
   ORDER_REALTIME_EVENTS,
   buildOrderPayload,
@@ -42,6 +43,10 @@ export const consumePaymentEvents = async () => {
       }
 
       console.log("🎉 Order paid successfully 🐰");
+
+      if (order.type === "demo") {
+        startDemoKitchen(order._id.toString());
+      }
 
       const payload = buildOrderPayload(order);
       await Promise.all([

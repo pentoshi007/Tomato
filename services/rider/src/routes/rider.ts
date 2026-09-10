@@ -10,8 +10,10 @@ import {
   fetchMyCurrentOrder,
   updateOrderStatus,
 } from "../controllers/rider.js";
+import { seedDemoRiders } from "../controllers/demo.js";
 const router = express.Router();
 
+router.post("/internal/demo/seed", seedDemoRiders);
 router.get("/myprofile", isAuth, fetchMyProfile);
 router.patch("/toggle", isAuth, toggleRiderAvailability);
 router.patch("/sound", isAuth, updateRiderSoundPreference);

@@ -10,6 +10,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.get("/", (_req, res) => {
+  res.send("ok");
+});
 app.use("/internal", internalRouter);
 app.use("/api/internal", internalRouter);
 const server = http.createServer(app);

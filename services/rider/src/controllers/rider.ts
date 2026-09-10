@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 
 import axios from "axios";
 import { Rider } from "../model/Rider.js";
+import { UserSnapshot } from "../model/UserSnapshot.js";
 import getBuffer from "../config/datauri.js";
 
 export const addRiderProfile = TryCatch(
@@ -232,13 +233,16 @@ export const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const releaseClaim = () =>
     Rider.updateOne({ _id: rider._id }, { isAvailable: true });
   try {
+    const account = await UserSnapshot.findById(riderUserId).lean();
+    const riderName =
+      account?.name || rider.name || `Rider ${rider.phoneNumber.slice(-4)}`;
     const { data } = await axios.put(
       `${process.env.RESTAURANT_SERVICE}/api/order/assign/rider`,
       {
         orderId,
         riderId: rider._id.toString(),
         riderUserId: riderUserId.toString(),
-        riderName: rider.picture,
+        riderName,
         riderPhone: rider.phoneNumber,
       },
       {

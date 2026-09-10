@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import toast from "react-hot-toast";
 import type { Location } from "../types";
 import { installDemoApi, uninstallDemoApi } from "./api";
-import { DEMO_CITY, DEMO_INVITE_KEY } from "./config";
+import { DEMO_CITY } from "./config";
 import { demoSocket } from "./socket";
 import { demoStore } from "./store";
-import type { DemoRole, DemoSeed, InviteReason } from "./types";
+import type { DemoRole, DemoSeed } from "./types";
 import { DemoContext, type DemoContextValue } from "./useDemo";
 
 export const DemoProvider = ({ children }: { children: ReactNode }) => {
@@ -15,7 +15,6 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   });
   const [origin, setOrigin] = useState<Location | null>(() => demoStore.origin);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteReason, setInviteReason] = useState<InviteReason | null>(null);
 
   useEffect(() => {
     installDemoApi();
@@ -28,7 +27,6 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
     setOrigin(demoStore.origin);
     setRole(nextRole);
     setInviteOpen(false);
-    window.sessionStorage.setItem(DEMO_INVITE_KEY, "1");
     toast.success("Demo mode on — nothing here touches your account");
   }, []);
 
@@ -48,20 +46,16 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
       origin,
       city: role !== null ? DEMO_CITY : null,
       inviteOpen,
-      inviteReason,
-      openInvite: (reason?: InviteReason) => {
-        setInviteReason(reason ?? "manual");
+      openInvite: () => {
         setInviteOpen(true);
       },
       closeInvite: () => {
         setInviteOpen(false);
-        setInviteReason(null);
-        window.sessionStorage.setItem(DEMO_INVITE_KEY, "1");
       },
       enter,
       exit,
     }),
-    [role, origin, inviteOpen, inviteReason, enter, exit],
+    [role, origin, inviteOpen, enter, exit],
   );
 
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;

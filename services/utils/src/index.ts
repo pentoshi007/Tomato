@@ -14,6 +14,9 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 app.use(cors());
+app.get("/", (_req, res) => {
+  res.send("ok");
+});
 
 const { CLOUD_NAME, CLOUD_API_KEY, CLOUD_API_SECRET } = process.env;
 

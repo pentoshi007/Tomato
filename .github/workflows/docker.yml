@@ -1,0 +1,72 @@
+name: docker
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.pick.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          filters: |
+            auth:
+              - 'services/auth/**'
+            admin:
+              - 'services/admin/**'
+            realtime:
+              - 'services/realtime/**'
+            restaurant:
+              - 'services/restaurant/**'
+            rider:
+              - 'services/rider/**'
+            utils:
+              - 'services/utils/**'
+      - id: pick
+        env:
+          CHANGED: ${{ steps.filter.outputs.changes }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo 'services=["auth","admin","realtime","restaurant","rider","utils"]' >> "$GITHUB_OUTPUT"
+          else
+            echo "services=${CHANGED:-[]}" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: changes
+    if: >-
+      needs.changes.outputs.services != '[]' &&
+      needs.changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ steps.sha.outputs.short }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
