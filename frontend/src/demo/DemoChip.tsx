@@ -13,7 +13,7 @@ const DemoChip = () => {
     return (
       <button
         type="button"
-        onClick={openInvite}
+        onClick={() => openInvite()}
         className="chip cursor-pointer bg-butter shadow-pop-xs transition-transform hover:-translate-0.5"
       >
         <BiJoystick className="h-4 w-4 text-tomato" />
@@ -30,7 +30,7 @@ const DemoChip = () => {
       </span>
       <button
         type="button"
-        onClick={openInvite}
+        onClick={() => openInvite()}
         title="Switch demo persona"
         className="cursor-pointer text-[11px] font-black tracking-wide uppercase"
       >

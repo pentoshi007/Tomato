@@ -171,6 +171,12 @@ class DemoStore {
     );
   }
 
+  private canPingRider() {
+    const state = this.state;
+    if (!state) return false;
+    return state.role !== "rider" || state.rider.isAvailable;
+  }
+
   private isRelevant(order: IOrder) {
     const state = this.state;
     if (!state) return false;
@@ -230,7 +236,7 @@ class DemoStore {
     if (status === "rider_assigned") {
       demoSocket.dispatch("order:rider_assigned", { ...order });
     }
-    if (status === "ready_for_rider") {
+    if (status === "ready_for_rider" && this.canPingRider()) {
       demoSocket.dispatch("order:available", { orderId: order._id });
     }
   }
@@ -298,7 +304,8 @@ class DemoStore {
       orderId: order._id,
       status: order.status,
     });
-    if (order.status === "ready_for_rider") {
+    const pingRider = this.canPingRider();
+    if (order.status === "ready_for_rider" && pingRider) {
       demoSocket.dispatch("order:available", { orderId: order._id });
     }
     return true;
@@ -759,13 +766,27 @@ class DemoStore {
       return { data: { soundEnabled: state.rider.soundEnabled } };
     }
     if (on("PATCH", "/api/rider/toggle")) {
+      const nextAvailable = Boolean(body.isAvailable);
+      if (nextAvailable) {
+        const active = state.orders.find(
+          (entry) => entry.riderId === state.rider._id && isActiveOrder(entry),
+        );
+        if (active) {
+          return {
+            status: 409,
+            data: {
+              message: "Complete your current order before going online",
+            },
+          };
+        }
+      }
       state.rider = {
         ...state.rider,
-        isAvailable: Boolean(body.isAvailable),
+        isAvailable: nextAvailable,
         lastActiveAt: new Date().toISOString(),
       };
       this.persist();
-      this.pulseAvailable(Date.now(), true);
+      if (nextAvailable) this.pulseAvailable(Date.now(), true);
       return { data: { rider: state.rider } };
     }
     if (on("GET", "/api/rider/current/order")) {
@@ -777,15 +798,25 @@ class DemoStore {
     if ((params = on("POST", "/api/rider/accept/*"))) {
       const order = state.orders.find((entry) => entry._id === params?.[0]);
       if (!order) return { status: 404, data: { message: "Order not found" } };
+      const activeOrder = state.orders.find(
+        (entry) => entry.riderId === state.rider._id && isActiveOrder(entry),
+      );
       if (order.riderId) {
         return {
           status: 400,
           data: { message: "Another rider already claimed this order" },
         };
       }
+      if (!state.rider.isAvailable || activeOrder) {
+        return {
+          status: 400,
+          data: { message: "Rider is offline or already has an active order" },
+        };
+      }
       order.riderId = state.rider._id;
       order.riderName = state.userName;
       order.riderPhone = Number(state.rider.phoneNumber);
+      state.rider = { ...state.rider, isAvailable: false };
       this.setStatus(order, "rider_assigned");
       this.persist();
       return { data: { order, message: "Order accepted" } };

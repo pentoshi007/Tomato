@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useAppContext } from "../context/AppContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { IAddress, IRestaurant, ICart, IMenuItem } from "../types";
 import { restaurantService, utilsService } from "../config";
@@ -17,6 +17,7 @@ import { FoodImage } from "../components/ui/FoodImage";
 import { Skeleton, EmptyState } from "../components/ui/primitives";
 import { Fries } from "../components/ui/illustrations";
 import { useDemo } from "../demo/useDemo";
+import DemoPaymentSheet from "../demo/DemoPaymentSheet";
 
 const TOMATO_COLOR = "#E23744";
 
@@ -88,6 +89,8 @@ export default function CheckoutPage() {
 
   const { cart, subTotal, quantity, fetchMyCart } = useAppContext();
   const { active: demoActive } = useDemo();
+  const [demoSheetOpen, setDemoSheetOpen] = useState(false);
+  const demoPaymentRef = useRef<{ paymentId: string } | null>(null);
   const [addresses, setAddresses] = useState<IAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
@@ -282,16 +285,21 @@ export default function CheckoutPage() {
   };
 
   const payInDemo = async () => {
-    const order = await createOrder(selectedPayment);
-    if (!order) return;
+    const order = (await createOrder(selectedPayment)) as {
+      orderId: string;
+      order?: { paymentId?: string };
+    } | null;
+    if (!order) return false;
+    demoPaymentRef.current = {
+      paymentId: order.order?.paymentId ?? `demo-pay-${order.orderId}`,
+    };
     await fetchMyCart();
-    toast.success("Demo payment approved — tracking your order");
-    navigate(`/order/${order.orderId}`);
+    return true;
   };
 
   const handlePay = () => {
     if (demoActive) {
-      void payInDemo();
+      setDemoSheetOpen(true);
       return;
     }
     if (selectedPayment === "razorpay") payWithRazorpay();
@@ -504,6 +512,22 @@ export default function CheckoutPage() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-paper p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         {payButton}
       </div>
+
+      {demoSheetOpen && (
+        <DemoPaymentSheet
+          gateway={selectedPayment}
+          amount={grandTotal}
+          restaurantName={restaurant.name}
+          onPay={payInDemo}
+          onDone={(paid) => {
+            setDemoSheetOpen(false);
+            if (paid && demoPaymentRef.current) {
+              toast.success("Payment successful");
+              navigate(`/paymentsuccess/${demoPaymentRef.current.paymentId}`);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

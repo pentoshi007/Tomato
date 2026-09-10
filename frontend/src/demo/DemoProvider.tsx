@@ -5,7 +5,7 @@ import { installDemoApi, uninstallDemoApi } from "./api";
 import { DEMO_CITY, DEMO_INVITE_KEY } from "./config";
 import { demoSocket } from "./socket";
 import { demoStore } from "./store";
-import type { DemoRole, DemoSeed } from "./types";
+import type { DemoRole, DemoSeed, InviteReason } from "./types";
 import { DemoContext, type DemoContextValue } from "./useDemo";
 
 export const DemoProvider = ({ children }: { children: ReactNode }) => {
@@ -15,6 +15,7 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   });
   const [origin, setOrigin] = useState<Location | null>(() => demoStore.origin);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteReason, setInviteReason] = useState<InviteReason | null>(null);
 
   useEffect(() => () => uninstallDemoApi(), []);
 
@@ -44,15 +45,20 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
       origin,
       city: role !== null ? DEMO_CITY : null,
       inviteOpen,
-      openInvite: () => setInviteOpen(true),
+      inviteReason,
+      openInvite: (reason?: InviteReason) => {
+        setInviteReason(reason ?? "manual");
+        setInviteOpen(true);
+      },
       closeInvite: () => {
         setInviteOpen(false);
+        setInviteReason(null);
         window.sessionStorage.setItem(DEMO_INVITE_KEY, "1");
       },
       enter,
       exit,
     }),
-    [role, origin, inviteOpen, enter, exit],
+    [role, origin, inviteOpen, inviteReason, enter, exit],
   );
 
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;

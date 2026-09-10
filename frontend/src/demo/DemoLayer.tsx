@@ -18,8 +18,8 @@ const DemoLayer = () => {
 
     probed.current = true;
     let cancelled = false;
-    void probeEmptyState(user.role, location).then((isEmpty) => {
-      if (!cancelled && isEmpty) openInvite();
+    void probeEmptyState(user.role, location).then((reason) => {
+      if (!cancelled && reason) openInvite(reason);
     });
     return () => {
       cancelled = true;

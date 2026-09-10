@@ -1,6 +1,7 @@
 import axios from "axios";
 import { restaurantService, riderService } from "../config";
 import type { Location } from "../types";
+import type { InviteReason } from "./types";
 
 const authConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -47,13 +48,13 @@ const probeRider = async () => {
 export const probeEmptyState = async (
   role: string,
   location: Location | null,
-): Promise<boolean> => {
+): Promise<InviteReason | null> => {
   try {
-    if (role === "seller") return await probeSeller();
-    if (role === "rider") return await probeRider();
-    if (role === "admin") return false;
-    return await probeCustomer(location);
+    if (role === "seller") return (await probeSeller()) ? "empty-workspace" : null;
+    if (role === "rider") return (await probeRider()) ? "empty-workspace" : null;
+    if (role === "admin") return null;
+    return (await probeCustomer(location)) ? "no-restaurants" : null;
   } catch {
-    return true;
+    return "no-restaurants";
   }
 };

@@ -11,6 +11,8 @@ export type DemoRole = "customer" | "seller" | "rider";
 
 export const DEMO_ROLES: DemoRole[] = ["customer", "seller", "rider"];
 
+export type InviteReason = "no-restaurants" | "empty-workspace" | "manual";
+
 export interface DemoSeed {
   userId: string;
   userName: string;
