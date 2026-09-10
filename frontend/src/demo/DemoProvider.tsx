@@ -17,7 +17,10 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteReason, setInviteReason] = useState<InviteReason | null>(null);
 
-  useEffect(() => () => uninstallDemoApi(), []);
+  useEffect(() => {
+    installDemoApi();
+    return () => uninstallDemoApi();
+  }, []);
 
   const enter = useCallback((nextRole: DemoRole, seed: DemoSeed) => {
     demoSocket.reset();

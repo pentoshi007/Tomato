@@ -680,7 +680,7 @@ class DemoStore {
     if (on("GET", "/api/address/get")) {
       return { data: { addresses: state.addresses } };
     }
-    if (on("POST", "/api/address/add")) {
+    if (on("POST", "/api/address/new")) {
       const address = {
         _id: this.nextId("demo-address"),
         userId: state.userId,

@@ -16,8 +16,12 @@ import { useAppContext } from "../context/AppContext";
 import axios from "axios";
 import { BiMapPin, BiRefresh, BiChevronRight } from "react-icons/bi";
 import { useNavigate } from "react-router-dom";
-import { EmptyState, Skeleton } from "../components/ui/primitives";
+import { EmptyState, Skeleton, Spinner } from "../components/ui/primitives";
 import { SteamBowl } from "../components/ui/illustrations";
+import {
+  clearPaymentConfirming,
+  paymentConfirmingStartedAt,
+} from "../utils/paymentConfirmation";
 
 function ProgressBar({ status }: { status: IOrder["status"] }) {
   const currentIdx = ORDER_PROGRESS_STEPS.indexOf(status);
@@ -173,12 +177,15 @@ function OrdersSkeleton() {
 export default function Orders() {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmingPayment, setConfirmingPayment] = useState(
+    () => paymentConfirmingStartedAt() !== null,
+  );
   const { socket } = useSocket();
   const { user } = useAppContext();
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const { data } = await axios.get(`${restaurantService}/api/order/my`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -188,7 +195,7 @@ export default function Orders() {
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -211,6 +218,17 @@ export default function Orders() {
       socket.off("order:rider_assigned", onRiderAssigned);
     };
   }, [socket, fetchOrders]);
+
+  useEffect(() => {
+    if (!confirmingPayment) return;
+    if (orders.length > 0 || paymentConfirmingStartedAt() === null) {
+      clearPaymentConfirming();
+      setConfirmingPayment(false);
+      return;
+    }
+    const id = window.setInterval(() => void fetchOrders(true), 2000);
+    return () => window.clearInterval(id);
+  }, [confirmingPayment, orders, fetchOrders]);
 
   const activeOrders = orders.filter(isActiveOrder);
   const pastOrders = orders.filter((order) => !isActiveOrder(order));
@@ -242,7 +260,17 @@ export default function Orders() {
         </button>
       </div>
 
-      {loading && orders.length === 0 ? (
+      {confirmingPayment && orders.length === 0 ? (
+        <div className="card-flat flex flex-col items-center gap-3 border-dashed px-6 py-14 text-center">
+          <Spinner size={34} />
+          <h3 className="font-display text-xl font-bold">
+            Confirming your payment…
+          </h3>
+          <p className="max-w-sm text-sm text-smoke">
+            Your order is landing — this usually takes a few seconds.
+          </p>
+        </div>
+      ) : loading && orders.length === 0 ? (
         <OrdersSkeleton />
       ) : orders.length === 0 ? (
         <EmptyState

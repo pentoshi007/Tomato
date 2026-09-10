@@ -1,6 +1,7 @@
 interface LogoProps {
   size?: number;
   withWordmark?: boolean;
+  wordmarkClassName?: string;
   className?: string;
 }
 
@@ -54,13 +55,14 @@ export const TomatoMark = ({ size = 36 }: { size?: number }) => (
 export const Logo = ({
   size = 36,
   withWordmark = true,
+  wordmarkClassName = "",
   className = "",
 }: LogoProps) => (
   <span className={`inline-flex items-center gap-2 ${className}`}>
     <TomatoMark size={size} />
     {withWordmark && (
       <span
-        className="font-display leading-none font-extrabold tracking-tight text-ink lowercase"
+        className={`font-display leading-none font-extrabold tracking-tight text-ink lowercase ${wordmarkClassName}`}
         style={{ fontSize: size * 0.72 }}
       >
         tomato

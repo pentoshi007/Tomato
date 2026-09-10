@@ -225,7 +225,7 @@ const AddAddressPage = () => {
     try {
       setAdding(true);
       await axios.post(
-        `${restaurantService}/api/address/add`,
+        `${restaurantService}/api/address/new`,
         {
           formattedAddress: formattedAddress.trim(),
           mobile: Number(mobile),

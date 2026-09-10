@@ -32,18 +32,27 @@ const RestaurantOrders = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState(false);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  // Initialize audio once at mount, independent of socket
   useEffect(() => {
-    audioRef.current = new Audio(audio);
-    audioRef.current.preload = "auto";
-    audioRef.current.load();
+    const player = new Audio(audio);
+    player.preload = "auto";
+    audioRef.current = player;
+    const unlock = () => {
+      player
+        .play()
+        .then(() => {
+          player.pause();
+          player.currentTime = 0;
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("pointerdown", unlock, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock, true);
+      player.pause();
+      audioRef.current = null;
+    };
   }, []);
-
-  useEffect(() => {
-    setAudioUnlocked(soundEnabled);
-  }, [soundEnabled]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -69,7 +78,7 @@ const RestaurantOrders = ({
   useEffect(() => {
     if (!socket) return;
     const onNewOrder = () => {
-      if (audioUnlocked && soundEnabled && audioRef.current) {
+      if (soundEnabled && audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(console.log);
       }
@@ -79,7 +88,7 @@ const RestaurantOrders = ({
     return () => {
       socket.off(NEW_ORDER_EVENT, onNewOrder);
     };
-  }, [socket, audioUnlocked, soundEnabled, fetchOrders]);
+  }, [socket, soundEnabled, fetchOrders]);
 
   useEffect(() => {
     if (!socket) return;
@@ -116,10 +125,8 @@ const RestaurantOrders = ({
       );
 
       onSoundEnabledChange(persistedSoundEnabled);
-      setAudioUnlocked(persistedSoundEnabled);
     } catch (error) {
       console.log("Sound preference update failed:", error);
-      setAudioUnlocked(soundEnabled);
     }
   };
 

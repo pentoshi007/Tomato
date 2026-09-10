@@ -112,8 +112,8 @@ const Cart = () => {
         <span className="chip bg-mustard">{cart.length} items</span>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="min-w-0 space-y-4">
           <div className="card-flat flex items-center justify-between gap-4 p-4">
             <div className="min-w-0">
               <p className="text-xs font-black tracking-widest text-smoke uppercase">
@@ -197,7 +197,7 @@ const Cart = () => {
           </button>
         </div>
 
-        <aside className="card h-fit p-5 lg:sticky lg:top-24">
+        <aside className="card h-fit min-w-0 p-5 lg:sticky lg:top-24">
           <h2 className="font-display text-lg font-bold">The bill</h2>
 
           <div className="mt-4 space-y-2.5 text-sm font-medium">

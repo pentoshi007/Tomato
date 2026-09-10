@@ -9,7 +9,7 @@ const CartButton = ({ quantity }: { quantity: number }) => (
   <Link
     to="/cart"
     aria-label={`Cart, ${quantity} items`}
-    className="btn-secondary relative !rounded-full !p-2.5"
+    className="btn-secondary relative !rounded-full !p-2 sm:!p-2.5"
   >
     <svg
       width="20"
@@ -89,20 +89,20 @@ const Navbar = () => {
     <header className="sticky top-0 z-40 w-full border-b-2 border-ink bg-cream/95 backdrop-blur-[2px]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-3">
         <Link to="/" aria-label="Tomato home" className="shrink-0">
-          <Logo size={34} />
+          <Logo size={34} wordmarkClassName="hidden xs:inline" />
         </Link>
 
         {isHomePage && (
           <div className="hidden max-w-lg flex-1 md:block">{searchBar}</div>
         )}
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           <DemoChip />
           {isAuth && (
             <Link
               to="/orders"
               aria-label="Your orders"
-              className="btn-secondary !rounded-full !p-2.5"
+              className="btn-secondary !rounded-full !p-2 sm:!p-2.5"
             >
               <BiReceipt className="h-5 w-5" />
             </Link>
@@ -112,7 +112,7 @@ const Navbar = () => {
             <Link
               to="/account"
               aria-label="Your account"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-tomato text-sm font-black text-white shadow-pop-xs transition-transform hover:-translate-0.5 hover:shadow-pop-sm"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-tomato text-sm font-black text-white shadow-pop-xs transition-transform hover:-translate-0.5 hover:shadow-pop-sm sm:h-10 sm:w-10"
             >
               {user?.name?.charAt(0).toUpperCase() ?? "?"}
             </Link>

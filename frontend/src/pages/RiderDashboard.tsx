@@ -285,15 +285,24 @@ const RiderDashboard = () => {
   const [currentOrderLoading, setCurrentOrderLoading] = useState(true);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   useEffect(() => {
     const player = new Audio("/sounds/faahh.mp3");
     player.preload = "auto";
     audioRef.current = player;
-
+    const unlock = () => {
+      player
+        .play()
+        .then(() => {
+          player.pause();
+          player.currentTime = 0;
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("pointerdown", unlock, { once: true, capture: true });
     return () => {
+      window.removeEventListener("pointerdown", unlock, true);
       player.pause();
       audioRef.current = null;
     };
@@ -319,7 +328,6 @@ const RiderDashboard = () => {
       );
 
       setSoundEnabled(persistedSoundEnabled);
-      setAudioUnlocked(persistedSoundEnabled);
       setProfile((current) =>
         current
           ? { ...current, soundEnabled: persistedSoundEnabled }
@@ -330,7 +338,6 @@ const RiderDashboard = () => {
       );
     } catch (error) {
       console.log("Sound preference update failed:", error);
-      setAudioUnlocked(soundEnabled);
       toast.error(
         nextSoundEnabled ? "Could not enable sound" : "Could not disable sound",
       );
@@ -345,7 +352,7 @@ const RiderDashboard = () => {
         prev.includes(orderId) ? prev : [...prev, orderId],
       );
 
-      if (audioUnlocked && soundEnabled && audioRef.current) {
+      if (soundEnabled && audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch((error) => {
           console.log("Order notification audio failed:", error);
@@ -361,7 +368,7 @@ const RiderDashboard = () => {
     return () => {
       socket.off("order:available", onOrderAvailable);
     };
-  }, [socket, audioUnlocked, soundEnabled]);
+  }, [socket, soundEnabled]);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -374,7 +381,6 @@ const RiderDashboard = () => {
       const persistedSoundEnabled = Boolean(rider?.soundEnabled);
       setProfile(rider);
       setSoundEnabled(persistedSoundEnabled);
-      setAudioUnlocked(persistedSoundEnabled);
     } catch (error) {
       setProfile(null);
       if (!(axios.isAxiosError(error) && error.response?.status === 404)) {
