@@ -10,12 +10,14 @@ import {
   getCurrentOrdersForRider,
   updateOrderStatusRider,
   fetchPreviousDemoRider,
+  persistOrderRoute,
 } from "../controllers/order.js";
 import { isAuth, isSeller } from "../middlewares/isAuth.js";
 
 const router = Router();
 
 router.post("/new", isAuth, createOrder);
+router.put("/route", persistOrderRoute);
 router.get("/my", isAuth, getMyOrders);
 router.get("/payment/:orderId", fetchOrderForPayment);
 router.get(

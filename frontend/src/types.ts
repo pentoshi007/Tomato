@@ -55,6 +55,13 @@ export type OrderStatus =
 export type PaymentMethod = "razorpay" | "stripe";
 export type PaymentStatus = "pending" | "paid" | "failed";
 
+export interface IOrderRoute {
+  phase: "pickup" | "delivery";
+  path: [number, number][];
+  startedAt: number | string;
+  durationMs: number;
+}
+
 export interface IOrderItem {
   itemId: string;
   name: string;
@@ -88,6 +95,7 @@ export interface IOrder {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   paymentId: string | null;
+  activeRoute?: IOrderRoute | null;
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;

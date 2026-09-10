@@ -4,13 +4,76 @@ import Restaurant from "../models/Restaurant.js";
 import MenuItems from "../models/MenuItems.js";
 import { DEMO_RESTAURANT_CATALOG } from "./demoCatalog.js";
 import { destinationPoint } from "../utils/geo.js";
+import { getDistanceKm } from "../utils/getDistanceKm.js";
+import { fetchFoodPois, type FoodPoi } from "../utils/overpassPois.js";
 import { ensureGeoIndexes } from "../utils/geoIndex.js";
 
 const CLUSTER_DEDUPE_KM = 8;
 const GEOCODE_TIMEOUT_MS = 3000;
 const EARTH_RADIUS_KM = 6371;
+const POI_SEARCH_RADIUS_KM = 7;
 
 type AreaContext = { city: string | null; suburb: string | null };
+
+type SeedLocation = {
+  latitude: number;
+  longitude: number;
+  formattedAddress: string;
+};
+
+const addressScore = (poi: FoodPoi) =>
+  (poi.housenumber ? 2 : 0) +
+  (poi.street ? 2 : 0) +
+  (poi.suburb ? 1 : 0) +
+  (poi.city ? 1 : 0);
+
+const poiAddress = (poi: FoodPoi, area: AreaContext) => {
+  const line1 =
+    [poi.housenumber, poi.street].filter(Boolean).join(" ") || poi.name;
+  const place = [poi.suburb, poi.city ?? area.city, poi.postcode]
+    .filter(Boolean)
+    .join(", ");
+  return place ? `${line1}, ${place}` : line1;
+};
+
+const selectPoiLocations = (
+  pois: FoodPoi[],
+  count: number,
+  latitude: number,
+  longitude: number,
+  area: AreaContext,
+): SeedLocation[] => {
+  const byName = new Map<string, FoodPoi>();
+  for (const poi of pois) {
+    const key = poi.name.toLowerCase().replace(/\s+/g, " ").trim();
+    const known = byName.get(key);
+    if (!known || addressScore(poi) > addressScore(known)) byName.set(key, poi);
+  }
+  const sorted = [...byName.values()].sort(
+    (a, b) =>
+      getDistanceKm(latitude, longitude, a.latitude, a.longitude) -
+      getDistanceKm(latitude, longitude, b.latitude, b.longitude),
+  );
+  if (sorted.length < count) return [];
+  const picked: FoodPoi[] = [];
+  for (let i = 0; i < count; i++) {
+    const start = Math.floor((i * sorted.length) / count);
+    const end = Math.max(
+      start + 1,
+      Math.floor(((i + 1) * sorted.length) / count),
+    );
+    const best = sorted
+      .slice(start, end)
+      .sort((a, b) => addressScore(b) - addressScore(a))[0];
+    if (best) picked.push(best);
+  }
+  if (picked.length < count) return [];
+  return picked.map((poi) => ({
+    latitude: poi.latitude,
+    longitude: poi.longitude,
+    formattedAddress: poiAddress(poi, area),
+  }));
+};
 
 const areaCache = new Map<string, AreaContext>();
 
@@ -90,11 +153,36 @@ const nearbyDemoCount = (latitude: number, longitude: number) =>
     },
   });
 
+const fallbackLocation = (
+  seed: (typeof DEMO_RESTAURANT_CATALOG)[number],
+  area: AreaContext,
+  latitude: number,
+  longitude: number,
+): SeedLocation => {
+  const point = destinationPoint(
+    latitude,
+    longitude,
+    seed.bearingDeg,
+    seed.distanceKm,
+  );
+  return {
+    latitude: point.latitude,
+    longitude: point.longitude,
+    formattedAddress: composeAddress(
+      seed.addressLine,
+      area,
+      point.latitude,
+      point.longitude,
+    ),
+  };
+};
+
 const buildCluster = async (latitude: number, longitude: number) => {
   const clusterKey = clusterKeyOf(latitude, longitude);
   await ensureGeoIndexes();
-  const [area, existing] = await Promise.all([
+  const [area, pois, existing] = await Promise.all([
     fetchAreaContext(latitude, longitude, clusterKey),
+    fetchFoodPois(latitude, longitude, POI_SEARCH_RADIUS_KM).catch(() => []),
     Restaurant.find({ type: "demo", demoClusterKey: clusterKey }, { name: 1 })
       .lean(),
   ]);
@@ -102,15 +190,26 @@ const buildCluster = async (latitude: number, longitude: number) => {
     existing.map((restaurant) => [restaurant.name, restaurant._id]),
   );
 
+  const locations = selectPoiLocations(
+    pois,
+    DEMO_RESTAURANT_CATALOG.length,
+    latitude,
+    longitude,
+    area,
+  );
+  const locationBySeed = new Map(
+    DEMO_RESTAURANT_CATALOG.map((seed, index) => [
+      seed.name,
+      locations[index] ?? null,
+    ]),
+  );
+
   const newDocs = DEMO_RESTAURANT_CATALOG.filter(
     (seed) => !existingByName.has(seed.name),
   ).map((seed) => {
-    const point = destinationPoint(
-      latitude,
-      longitude,
-      seed.bearingDeg,
-      seed.distanceKm,
-    );
+    const location =
+      locationBySeed.get(seed.name) ??
+      fallbackLocation(seed, area, latitude, longitude);
     return {
       _id: new mongoose.Types.ObjectId(),
       name: seed.name,
@@ -124,13 +223,8 @@ const buildCluster = async (latitude: number, longitude: number) => {
       demoClusterKey: clusterKey,
       autoLocation: {
         type: "Point" as const,
-        coordinates: [point.longitude, point.latitude],
-        formattedAddress: composeAddress(
-          seed.addressLine,
-          area,
-          point.latitude,
-          point.longitude,
-        ),
+        coordinates: [location.longitude, location.latitude],
+        formattedAddress: location.formattedAddress,
       },
     };
   });

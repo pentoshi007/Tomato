@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IOrderActiveRoute {
+  phase: "pickup" | "delivery";
+  path: [number, number][];
+  startedAt: Date;
+  durationMs: number;
+}
+
 export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   restaurantId: mongoose.Types.ObjectId;
@@ -41,6 +48,7 @@ export interface IOrder extends Document {
   paymentStatus: "pending" | "paid" | "failed";
   paymentId: string;
   type: "normal" | "demo";
+  activeRoute?: IOrderActiveRoute | null;
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -106,6 +114,22 @@ const orderSchema = new Schema<IOrder>(
     },
     paymentId: { type: String, default: null },
     type: { type: String, enum: ["normal", "demo"], default: "normal" },
+    activeRoute: {
+      type: new Schema(
+        {
+          phase: {
+            type: String,
+            enum: ["pickup", "delivery"],
+            required: true,
+          },
+          path: { type: [[Number]], required: true },
+          startedAt: { type: Date, required: true },
+          durationMs: { type: Number, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     expiresAt: { type: Date, index: { expireAfterSeconds: 0 } },
   },
   { timestamps: true },

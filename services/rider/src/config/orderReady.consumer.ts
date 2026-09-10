@@ -4,6 +4,11 @@ import { getChannel } from "./rabbitmq.js";
 import { Rider } from "../model/Rider.js";
 import { ensureDemoRiders } from "../utils/demoRiderSeed.js";
 import { withGeoIndexRepair } from "../utils/geoIndex.js";
+import {
+  createRouteWalker,
+  fetchDrivingRoute,
+  type RouteWalker,
+} from "../utils/routePath.js";
 
 type GeoPoint = { type: string; coordinates: [number, number] };
 
@@ -36,9 +41,8 @@ const DELIVERY_TRAVEL_MS_PER_KM = 26_000;
 const DELIVERY_TRAVEL_MIN_MS = 20_000;
 const LOCATION_PING_MS = 3_000;
 
-const movingTo = (
-  from: [number, number],
-  to: [number, number],
+const moveAlongRoute = (
+  walker: RouteWalker,
   totalMs: number,
   onPing: (point: [number, number]) => Promise<void>,
 ) =>
@@ -46,11 +50,7 @@ const movingTo = (
     const startedAt = Date.now();
     const tick = async () => {
       const ratio = Math.min(1, (Date.now() - startedAt) / totalMs);
-      const point: [number, number] = [
-        from[0] + (to[0] - from[0]) * ratio,
-        from[1] + (to[1] - from[1]) * ratio,
-      ];
-      await onPing(point);
+      await onPing(walker.pointAt(ratio));
       if (ratio >= 1) {
         resolve();
         return;
@@ -59,6 +59,47 @@ const movingTo = (
     };
     void tick();
   });
+
+type RoutePhase = "pickup" | "delivery";
+
+type ActiveRoute = {
+  phase: RoutePhase;
+  path: [number, number][];
+  startedAt: number;
+  durationMs: number;
+};
+
+const beginRoutePhase = async (
+  orderId: string,
+  userId: string,
+  phase: RoutePhase,
+  start: [number, number],
+  end: [number, number],
+  msPerKm: number,
+  minMs: number,
+) => {
+  const route = await fetchDrivingRoute(start, end);
+  const walker = createRouteWalker(route?.path ?? [start, end]);
+  if (!walker) return null;
+  const totalMs = Math.max(minMs, walker.totalKm * msPerKm);
+  const payload: ActiveRoute = {
+    phase,
+    path: walker.path,
+    startedAt: Date.now(),
+    durationMs: totalMs,
+  };
+  await callRestaurantService("/api/order/route", {
+    orderId,
+    route: payload,
+  }).catch((error) => {
+    console.log(`demo route persist failed for ${orderId}`, error);
+  });
+  await emitInternal("rider:route", `user:${userId}`, {
+    orderId,
+    ...payload,
+  }).catch(() => undefined);
+  return { walker, totalMs };
+};
 
 const claimDemoRider = async (
   clusterKey: string | undefined,
@@ -123,21 +164,25 @@ const runDemoDelivery = async (
     deliveryLocation.longitude,
   ];
 
-  const pickupDistanceKm = Math.hypot(
-    (pickupPoint[0] - riderStart[0]) * 111,
-    (pickupPoint[1] - riderStart[1]) * 111,
-  );
-  const pickupMs = Math.max(
-    PICKUP_TRAVEL_MIN_MS,
-    pickupDistanceKm * PICKUP_TRAVEL_MS_PER_KM,
-  );
-  await movingTo(riderStart, pickupPoint, pickupMs, async (point) => {
-    await emitInternal("rider:location", `user:${userId}`, {
+  const pingRiderLocation = (point: [number, number]) =>
+    emitInternal("rider:location", `user:${userId}`, {
       orderId,
       latitude: point[0],
       longitude: point[1],
     }).catch(() => undefined);
-  });
+
+  const pickup = await beginRoutePhase(
+    orderId,
+    userId,
+    "pickup",
+    riderStart,
+    pickupPoint,
+    PICKUP_TRAVEL_MS_PER_KM,
+    PICKUP_TRAVEL_MIN_MS,
+  );
+  if (pickup) {
+    await moveAlongRoute(pickup.walker, pickup.totalMs, pingRiderLocation);
+  }
 
   const picked = await callRestaurantService(
     "/api/order/update/status/rider",
@@ -145,21 +190,18 @@ const runDemoDelivery = async (
   ).catch(() => null);
   if (!picked?.success) return;
 
-  const deliveryDistanceKm = Math.hypot(
-    (deliveryPoint[0] - pickupPoint[0]) * 111,
-    (deliveryPoint[1] - pickupPoint[1]) * 111,
-  );
-  const deliveryMs = Math.max(
+  const delivery = await beginRoutePhase(
+    orderId,
+    userId,
+    "delivery",
+    pickupPoint,
+    deliveryPoint,
+    DELIVERY_TRAVEL_MS_PER_KM,
     DELIVERY_TRAVEL_MIN_MS,
-    deliveryDistanceKm * DELIVERY_TRAVEL_MS_PER_KM,
   );
-  await movingTo(pickupPoint, deliveryPoint, deliveryMs, async (point) => {
-    await emitInternal("rider:location", `user:${userId}`, {
-      orderId,
-      latitude: point[0],
-      longitude: point[1],
-    }).catch(() => undefined);
-  });
+  if (delivery) {
+    await moveAlongRoute(delivery.walker, delivery.totalMs, pingRiderLocation);
+  }
 
   await delay(2_000);
   await callRestaurantService("/api/order/update/status/rider", {

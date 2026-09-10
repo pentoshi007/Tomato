@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { restaurantService, realtimeService } from "../config";
 import { BiArrowBack, BiMapPin, BiPhone } from "react-icons/bi";
-import type { IOrder } from "../types";
-import UserOrderMap from "../components/UserOrderMap";
+import type { IOrder, IOrderRoute } from "../types";
+import UserOrderMap, { type LiveRoute } from "../components/UserOrderMap";
 import {
   ORDER_PROGRESS_STEPS,
   CUSTOMER_ORDER_EVENTS,
@@ -17,6 +17,24 @@ import {
 } from "../utils/orderflow";
 import { Skeleton, EmptyState } from "../components/ui/primitives";
 import { TomatoMark } from "../components/ui/Logo";
+
+const toLiveRoute = (route: IOrderRoute | null | undefined): LiveRoute | null => {
+  if (!route) return null;
+  if (route.phase !== "pickup" && route.phase !== "delivery") return null;
+  if (!Array.isArray(route.path) || route.path.length < 2) return null;
+  const startedAt =
+    typeof route.startedAt === "number"
+      ? route.startedAt
+      : Date.parse(String(route.startedAt));
+  if (!Number.isFinite(startedAt)) return null;
+  if (!Number.isFinite(route.durationMs) || route.durationMs <= 0) return null;
+  return {
+    phase: route.phase,
+    path: route.path,
+    startedAt,
+    durationMs: route.durationMs,
+  };
+};
 
 function ProgressBar({ status }: { status: IOrder["status"] }) {
   const currentIdx = ORDER_PROGRESS_STEPS.indexOf(status);
@@ -65,6 +83,7 @@ export default function OrderPage() {
   const [order, setOrder] = useState<IOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [riderLocation, setRiderLocation] = useState<[number, number] | null>(null);
+  const [socketRoute, setSocketRoute] = useState<IOrderRoute | null>(null);
 
   const fetchOrder = useCallback(async () => {
     if (!orderId) return;
@@ -124,9 +143,22 @@ export default function OrderPage() {
     };
   }, [socket, orderId]);
 
+  useEffect(() => {
+    if (!socket || !orderId) return;
+    const onRiderRoute = (payload: (IOrderRoute & { orderId?: string }) | null) => {
+      if (!payload?.orderId || payload.orderId !== orderId) return;
+      setSocketRoute(payload);
+    };
+    socket.on("rider:route", onRiderRoute);
+    return () => {
+      socket.off("rider:route", onRiderRoute);
+    };
+  }, [socket, orderId]);
+
   // Drop the previous order's rider position when navigating between orders.
   useEffect(() => {
     setRiderLocation(null);
+    setSocketRoute(null);
   }, [orderId]);
 
   // Seed the rider's last known position so the map renders immediately on
@@ -200,6 +232,7 @@ export default function OrderPage() {
     Number.isFinite(latitude) && Number.isFinite(longitude)
       ? [latitude, longitude]
       : null;
+  const route = toLiveRoute(socketRoute ?? order.activeRoute ?? null);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -327,6 +360,8 @@ export default function OrderPage() {
         <UserOrderMap
           riderLocation={riderLocation}
           deliveryLocation={deliveryLocation}
+          route={route}
+          restaurantName={order.restaurantName}
         />
       )}
     </div>
