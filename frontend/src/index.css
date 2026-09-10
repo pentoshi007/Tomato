@@ -1,1 +1,309 @@
 @import "tailwindcss";
+
+@theme {
+  /* Palette — warm paper + ink + solid food colors. No gradients anywhere. */
+  --color-cream: #fff5ea;
+  --color-paper: #fffdf9;
+  --color-ink: #221610;
+  --color-smoke: #6f6259;
+  --color-mist: #eadfd2;
+
+  --color-tomato: #e23744;
+  --color-tomato-deep: #b91c2e;
+  --color-blush: #ffdcd8;
+
+  --color-mustard: #ffb627;
+  --color-butter: #ffedc2;
+
+  --color-basil: #1e9e62;
+  --color-mint: #d7f0e1;
+
+  --color-sky: #3d7dd8;
+  --color-skywash: #d8e8fb;
+
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-display: "Bricolage Grotesque", "Outfit", ui-sans-serif, system-ui,
+    sans-serif;
+
+  /* Hard offset shadows — the signature look */
+  --shadow-pop-xs: 1.5px 1.5px 0 0 var(--color-ink);
+  --shadow-pop-sm: 2.5px 2.5px 0 0 var(--color-ink);
+  --shadow-pop: 4px 4px 0 0 var(--color-ink);
+  --shadow-pop-lg: 6px 6px 0 0 var(--color-ink);
+  --shadow-pop-xl: 9px 9px 0 0 var(--color-ink);
+
+  --breakpoint-xs: 26rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-cream font-sans text-ink antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-mustard);
+    color: var(--color-ink);
+  }
+
+  /* Number inputs: hide spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  /* Slim, theme-matched scrollbars for horizontal rails */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Leaflet map theming to match the ink-outlined cards */
+  .leaflet-container {
+    font: inherit;
+    background: var(--color-mist);
+    z-index: 0;
+  }
+  .leaflet-popup-content-wrapper {
+    border: 2px solid var(--color-ink);
+    border-radius: 0.9rem;
+    box-shadow: var(--shadow-pop-sm);
+    font-family: var(--font-sans);
+  }
+  .leaflet-popup-tip {
+    border: 2px solid var(--color-ink);
+  }
+  .leaflet-bar {
+    border: 2px solid var(--color-ink) !important;
+    box-shadow: var(--shadow-pop-xs) !important;
+    border-radius: 0.6rem;
+    overflow: hidden;
+  }
+  .leaflet-bar a {
+    border-bottom: 1px solid var(--color-mist) !important;
+    color: var(--color-ink);
+  }
+}
+
+/* ---- Composable design-system utilities ---- */
+
+@utility btn {
+  @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-ink px-4 py-2.5 text-sm font-bold whitespace-nowrap select-none;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+@utility btn-primary {
+  @apply btn bg-tomato text-white shadow-pop;
+}
+@utility btn-dark {
+  @apply btn bg-ink text-cream;
+  box-shadow: 2.5px 2.5px 0 0 var(--color-tomato);
+}
+@utility btn-secondary {
+  @apply btn bg-paper text-ink shadow-pop-sm;
+}
+@utility btn-mustard {
+  @apply btn bg-mustard text-ink shadow-pop;
+}
+@utility btn-ghost {
+  @apply btn border-transparent bg-transparent text-ink shadow-none;
+}
+@utility btn-danger-ghost {
+  @apply btn border-transparent bg-transparent text-tomato shadow-none;
+}
+
+@utility card {
+  @apply rounded-2xl border-2 border-ink bg-paper shadow-pop;
+}
+@utility card-flat {
+  @apply rounded-2xl border-2 border-ink bg-paper;
+}
+@utility card-hover {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-paper px-3 py-1 text-xs font-bold whitespace-nowrap;
+}
+@utility sticker {
+  @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink px-3 py-1 text-xs font-black tracking-wide uppercase shadow-pop-xs;
+  transform: rotate(-2deg);
+}
+@utility input {
+  @apply w-full rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-sm font-medium text-ink placeholder:text-smoke/70;
+  transition: box-shadow 120ms ease;
+}
+@utility label {
+  @apply mb-1.5 block text-xs font-black tracking-wider text-smoke uppercase;
+}
+@utility skeleton {
+  @apply animate-pulse rounded-xl bg-mist/70;
+}
+
+/* ---- Hover / active states (must live outside @utility) ---- */
+
+@layer components {
+  .btn:active:not(:disabled) {
+    transform: translate(2.5px, 2.5px);
+    box-shadow: 0 0 0 0 var(--color-ink) !important;
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-tomato-deep -translate-0.5 shadow-pop-lg;
+  }
+  .btn-dark:hover:not(:disabled) {
+    @apply -translate-0.5;
+    box-shadow: 4px 4px 0 0 var(--color-tomato);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    @apply -translate-0.5 bg-white shadow-pop;
+  }
+  .btn-mustard:hover:not(:disabled) {
+    @apply -translate-0.5 shadow-pop-lg;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    @apply border-ink bg-paper;
+  }
+  .btn-danger-ghost:hover:not(:disabled) {
+    @apply border-tomato bg-blush;
+  }
+  .card-hover:hover {
+    @apply -translate-1 shadow-pop-lg;
+  }
+  .input:focus {
+    outline: none;
+    box-shadow: var(--shadow-pop-sm);
+  }
+  .input:disabled {
+    @apply cursor-not-allowed bg-mist/50 opacity-70;
+  }
+
+  /* ---- Marquee ---- */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 22s linear infinite;
+  }
+
+  /* ---- Toast overrides ---- */
+  .toast-pop {
+    border: 2px solid var(--color-ink) !important;
+    border-radius: 0.9rem !important;
+    box-shadow: var(--shadow-pop-sm) !important;
+    background: var(--color-paper) !important;
+    color: var(--color-ink) !important;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+}
+
+/* ---- Keyframes (transform/opacity only — cheap on mobile GPUs) ---- */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--float-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-12px) rotate(var(--float-rot, 0deg));
+  }
+}
+.animate-floaty {
+  animation: floaty 5s ease-in-out infinite;
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-pop-in {
+  animation: pop-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+.animate-wiggle {
+  animation: wiggle 0.6s ease-in-out infinite;
+}
+
+@keyframes ping-dot {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+.animate-ping-dot {
+  animation: ping-dot 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise-in {
+  animation: rise-in 320ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-floaty,
+  .animate-wiggle,
+  .marquee-track,
+  .animate-ping-dot {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

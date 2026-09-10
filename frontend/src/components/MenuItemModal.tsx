@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import type { IMenuItem } from "../types";
-import { BiCartAdd, BiX } from "react-icons/bi";
+import { BiX, BiPlus } from "react-icons/bi";
+import { FoodImage } from "./ui/FoodImage";
+import { Spinner } from "./ui/primitives";
 
 interface Props {
   item: IMenuItem;
@@ -9,70 +12,76 @@ interface Props {
 }
 
 const MenuItemModal = ({ item, onClose, onAddToCart, addingToCart }: Props) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 p-0 sm:items-center sm:p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.name}
     >
       <div
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="animate-pop-in relative w-full max-w-lg overflow-hidden rounded-t-3xl border-2 border-b-0 border-ink bg-paper shadow-pop-xl sm:rounded-3xl sm:border-b-2"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 rounded-full bg-white/90 p-1 text-gray-700 hover:bg-white"
+          className="btn-secondary absolute top-3 right-3 z-10 !rounded-full !p-1.5"
           aria-label="Close"
         >
-          <BiX size={22} />
+          <BiX size={20} />
         </button>
 
-        {item.image ? (
-          <img
+        <div className="relative h-60 border-b-2 border-ink">
+          <FoodImage
             src={item.image}
             alt={item.name}
-            className={`h-64 w-full object-contain bg-gray-50 ${
-              !item.isAvailable ? "grayscale brightness-75" : ""
+            width={900}
+            eager
+            className={`h-full w-full object-cover ${
+              !item.isAvailable ? "grayscale" : ""
             }`}
           />
-        ) : (
-          <div className="flex h-56 w-full items-center justify-center bg-gray-100 text-gray-400">
-            No Image
-          </div>
-        )}
-
-        <div className="p-5 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="text-xl font-bold text-gray-900">{item.name}</h2>
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                item.isAvailable
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {item.isAvailable ? "Available" : "Unavailable"}
+          {!item.isAvailable && (
+            <span className="sticker absolute bottom-3 left-3 bg-ink text-cream">
+              Sold out
             </span>
-          </div>
+          )}
+        </div>
 
-          <p className="text-sm text-gray-600 whitespace-pre-line">
+        <div className="space-y-3 p-5">
+          <h2 className="font-display text-2xl font-extrabold tracking-tight">
+            {item.name}
+          </h2>
+          <p className="text-sm leading-relaxed font-medium whitespace-pre-line text-smoke">
             {item.description || "No description"}
           </p>
 
-          <div className="flex items-center justify-between border-t pt-4">
-            <span className="text-2xl font-bold text-[#E23774]">
+          <div className="flex items-center justify-between border-t-2 border-mist pt-4">
+            <span className="font-display text-2xl font-extrabold text-tomato">
               ₹{item.price}
             </span>
             <button
               onClick={() => onAddToCart?.(item)}
               disabled={!item.isAvailable || addingToCart}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                !item.isAvailable || addingToCart
-                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                  : "bg-[#E23774] text-white hover:bg-[#c92e64]"
-              }`}
+              className="btn-primary"
             >
-              <BiCartAdd size={20} />
-              {addingToCart ? "Adding..." : "Add to cart"}
+              {addingToCart ? (
+                <Spinner size={18} className="text-white" />
+              ) : (
+                <BiPlus size={20} />
+              )}
+              {addingToCart ? "Adding…" : "Add to cart"}
             </button>
           </div>
         </div>

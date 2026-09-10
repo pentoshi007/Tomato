@@ -68,23 +68,23 @@ export const summarizeOrderItems = (items: IOrderItem[]) =>
 export const getOrderStatusClass = (status: OrderStatus | string) => {
   switch (status) {
     case "placed":
-      return "bg-amber-100 text-amber-700";
+      return "bg-butter text-ink";
     case "accepted":
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-mint text-ink";
     case "preparing":
-      return "bg-blue-100 text-blue-700";
+      return "bg-skywash text-ink";
     case "ready_for_rider":
-      return "bg-indigo-100 text-indigo-700";
+      return "bg-blush text-ink";
     case "rider_assigned":
-      return "bg-violet-100 text-violet-700";
+      return "bg-mustard text-ink";
     case "picked_up":
-      return "bg-purple-100 text-purple-700";
+      return "bg-tomato text-white";
     case "delivered":
-      return "bg-green-100 text-green-700";
+      return "bg-basil text-white";
     case "cancelled":
-      return "bg-red-100 text-red-600";
+      return "bg-ink text-cream";
     default:
-      return "bg-slate-100 text-slate-600";
+      return "bg-mist text-ink";
   }
 };
 
@@ -92,12 +92,12 @@ export const getOrderStatusClass = (status: OrderStatus | string) => {
 export const getActionButtonClass = (targetStatus: string) => {
   switch (targetStatus) {
     case "accepted":
-      return "bg-emerald-500 hover:bg-emerald-600 text-white";
+      return "bg-basil text-white";
     case "preparing":
-      return "bg-blue-500 hover:bg-blue-600 text-white";
+      return "bg-sky text-white";
     case "ready_for_rider":
-      return "bg-indigo-500 hover:bg-indigo-600 text-white";
+      return "bg-ink text-cream";
     default:
-      return "bg-slate-500 hover:bg-slate-600 text-white";
+      return "bg-tomato text-white";
   }
 };

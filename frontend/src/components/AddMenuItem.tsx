@@ -2,7 +2,8 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { restaurantService } from "../config";
 import axios from "axios";
-import { BiUpload } from "react-icons/bi";
+import { BiUpload, BiDish } from "react-icons/bi";
+import { Spinner } from "./ui/primitives";
 
 const AddMenuItem = ({ onItemAdded }: { onItemAdded: () => void }) => {
   const [name, setName] = useState("");
@@ -17,6 +18,7 @@ const AddMenuItem = ({ onItemAdded }: { onItemAdded: () => void }) => {
     setPrice("");
     setImage(null);
   };
+
   const handleSubmit = async () => {
     if (!name || !description || !price) {
       toast.error("Please fill all the fields");
@@ -37,7 +39,7 @@ const AddMenuItem = ({ onItemAdded }: { onItemAdded: () => void }) => {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      toast.success("Menu item added successfully");
+      toast.success("Dish added to the menu");
       resetForm();
       onItemAdded();
     } catch (error) {
@@ -47,46 +49,68 @@ const AddMenuItem = ({ onItemAdded }: { onItemAdded: () => void }) => {
       setLoading(false);
     }
   };
-  return (
-    <div className="max-w-md space-y-4 m-auto">
-      <h2 className="text-lg font-semibold text-center">Add Menu Item</h2>
 
-      <input
-        type="text"
-        placeholder="Item Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full rounded-lg border border-2 border-gray-400 px-4 py-2 text-sm outline-none focus:border-[#E23774] focus:ring-[#E23774] "
-      />
-      <textarea
-        placeholder="Item Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        className="w-full rounded-lg border border-2 border-gray-400 px-4 py-2 text-sm outline-none focus:border-[#E23774] focus:ring-[#E23774] "
-      />
-      <input
-        type="number"
-        placeholder="Item Price (₹)"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
-        className="w-full rounded-lg border border-2 border-gray-400 px-4 py-2 text-sm outline-none focus:border-[#E23774] focus:ring-[#E23774] "
-      />
-      <label className="flex cursor-pointer items-center gap-3 rounded-lg border-gray-400 p-4 text-sm hover:bg-gray-50 bg-gray-100">
-        <BiUpload className="h-5 w-5 text-[#E23774] " />
-        {image ? image.name : "Upload Item Image"}
+  return (
+    <div className="m-auto max-w-md space-y-4 text-left">
+      <div>
+        <label className="label" htmlFor="dish-name">Dish name</label>
         <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImage(e.target.files?.[0] || null)}
-          className="hidden"
+          id="dish-name"
+          type="text"
+          placeholder="Paneer tikka pizza"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="input"
         />
-      </label>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="dish-desc">Description</label>
+        <textarea
+          id="dish-desc"
+          placeholder="Smoky paneer, charred peppers, house sauce…"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="input min-h-20 resize-y"
+        />
+      </div>
+
+      <div>
+        <label className="label" htmlFor="dish-price">Price (₹)</label>
+        <input
+          id="dish-price"
+          type="number"
+          min="0"
+          placeholder="249"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="input"
+        />
+      </div>
+
+      <div>
+        <span className="label">Photo</span>
+        <label className="card-flat flex cursor-pointer items-center gap-3 border-dashed p-4 text-sm font-bold text-smoke transition-colors hover:bg-butter">
+          <BiUpload className="h-5 w-5 shrink-0 text-tomato" />
+          <span className="truncate">
+            {image ? image.name : "Upload a dish photo"}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImage(e.target.files?.[0] || null)}
+            className="hidden"
+          />
+        </label>
+      </div>
+
       <button
         onClick={handleSubmit}
         disabled={loading}
-        className="w-full rounded-lg py-3  text-center text-sm font-semibold text-white bg-[#E23774] hover:bg-[#d91f66] cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn-primary w-full !py-3"
       >
-        {loading ? "Submitting..." : "Add Item"}
+        {loading ? <Spinner size={16} className="text-white" /> : <BiDish className="h-5 w-5" />}
+        {loading ? "Adding…" : "Add to menu"}
       </button>
     </div>
   );

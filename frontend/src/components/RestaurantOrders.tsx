@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { BiBell, BiRefresh } from "react-icons/bi";
+import { BiBell, BiBellOff, BiRefresh } from "react-icons/bi";
 import { useSocket } from "../context/useSocket";
 import type { IOrder } from "../types";
 import { restaurantService } from "../config";
 import OrderCard from "./OrderCard";
+import { Skeleton } from "./ui/primitives";
 import {
   NEW_ORDER_EVENT,
   formatOrderDateTime,
@@ -79,6 +80,7 @@ const RestaurantOrders = ({
       socket.off(NEW_ORDER_EVENT, onNewOrder);
     };
   }, [socket, audioUnlocked, soundEnabled, fetchOrders]);
+
   useEffect(() => {
     if (!socket) return;
     const onUpdateOrder = () => {
@@ -125,29 +127,29 @@ const RestaurantOrders = ({
   const completedOrders = orders.filter((order) => !isActiveOrder(order));
 
   return (
-    <section className="rounded-3xl border border-rose-100 bg-white shadow-sm">
+    <section className="card overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-b-2 border-ink bg-mustard p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#E23744]">
+          <p className="text-xs font-black tracking-widest text-ink/60 uppercase">
             Live orders
           </p>
-          <h3 className="mt-1 text-xl font-semibold text-slate-900">
+          <h3 className="font-display mt-1 text-2xl font-extrabold tracking-tight">
             Order board
           </h3>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="mt-0.5 text-sm font-semibold text-ink/70">
             {loading
               ? "Fetching latest orders…"
               : `${activeOrders.length} active · ${completedOrders.length} completed`}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
             onClick={() => void fetchOrders()}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-[#E23744] hover:text-[#E23744] disabled:opacity-50"
+            className="btn-secondary !py-2 !text-xs"
           >
             <BiRefresh className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -155,38 +157,39 @@ const RestaurantOrders = ({
           <button
             type="button"
             onClick={toggleSound}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-              soundEnabled
-                ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                : "bg-[#E23744] text-white hover:bg-[#d92d67]"
-            }`}
+            className={`${soundEnabled ? "btn-secondary" : "btn-primary"} !py-2 !text-xs`}
           >
-            <BiBell className="h-4 w-4" />
-            {soundEnabled ? "Disable sound" : "Enable sound"}
+            {soundEnabled ? (
+              <BiBellOff className="h-4 w-4" />
+            ) : (
+              <BiBell className="h-4 w-4" />
+            )}
+            {soundEnabled ? "Mute alerts" : "Enable sound"}
           </button>
         </div>
       </div>
 
       {/* Order columns */}
-      <div className="grid gap-5 p-5 xl:grid-cols-2">
+      <div className="grid gap-6 p-5 xl:grid-cols-2">
         {/* Active */}
         <div className="min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+            <h4 className="text-xs font-black tracking-widest text-smoke uppercase">
               Active
             </h4>
-            <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-[#E23744]">
+            <span className="chip bg-tomato text-white">
               {activeOrders.length}
             </span>
           </div>
 
           {loading && orders.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
-              Loading orders…
+            <div className="space-y-3">
+              <Skeleton className="h-36 w-full" />
+              <Skeleton className="h-36 w-full" />
             </div>
           ) : activeOrders.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No active orders right now.
+            <div className="card-flat border-dashed p-8 text-center text-sm font-medium text-smoke">
+              No active orders right now. Time to prep the station.
             </div>
           ) : (
             activeOrders.map((order) => (
@@ -202,43 +205,38 @@ const RestaurantOrders = ({
         {/* Completed */}
         <div className="min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+            <h4 className="text-xs font-black tracking-widest text-smoke uppercase">
               Completed
             </h4>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              {completedOrders.length}
-            </span>
+            <span className="chip bg-mist">{completedOrders.length}</span>
           </div>
 
           {completedOrders.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
+            <div className="card-flat border-dashed p-8 text-center text-sm font-medium text-smoke">
               No completed orders yet.
             </div>
           ) : (
             completedOrders.slice(0, 10).map((order) => (
-              <article
-                key={order._id}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-              >
+              <article key={order._id} className="card-flat p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-slate-900">
-                    {order._id}
+                  <p className="min-w-0 flex-1 truncate font-mono text-xs font-bold">
+                    #{order._id}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${getOrderStatusClass(order.status)}`}
+                      className={`chip !px-2 !py-0.5 !text-[10px] ${getOrderStatusClass(order.status)}`}
                     >
                       {getOrderStatusLabel(order.status)}
                     </span>
-                    <p className="text-sm font-semibold text-[#E23744]">
+                    <p className="text-sm font-extrabold text-tomato">
                       {formatOrderPrice(order.totalAmount)}
                     </p>
                   </div>
                 </div>
-                <p className="mt-1.5 text-sm text-slate-500">
+                <p className="mt-1.5 line-clamp-1 text-xs font-medium text-smoke">
                   {order.deliveryAddress.formattedAddress}
                 </p>
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+                <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-smoke">
                   <span>{formatOrderDateTime(order.createdAt)}</span>
                   <span className="capitalize">
                     {order.paymentMethod} · {order.items.length} item

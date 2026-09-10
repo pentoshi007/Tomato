@@ -1,10 +1,13 @@
-import { BiEdit, BiToggleLeft, BiToggleRight, BiCartAdd } from "react-icons/bi";
+import { BiTrash, BiPlus, BiMinus } from "react-icons/bi";
 import type { IMenuItem } from "../types";
 import { toast } from "react-hot-toast";
 import axios, { AxiosError } from "axios";
 import { restaurantService } from "../config";
 import { useAppContext } from "../context/AppContext";
 import { useState } from "react";
+import { FoodImage } from "./ui/FoodImage";
+import { EmptyState, Spinner } from "./ui/primitives";
+import { SteamBowl } from "./ui/illustrations";
 
 interface MenuItemsProps {
   items: IMenuItem[];
@@ -13,6 +16,10 @@ interface MenuItemsProps {
   restaurantId?: string;
   onItemClick?: (item: IMenuItem) => void;
 }
+
+const authHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
 
 const MenuItems = ({
   items,
@@ -23,37 +30,42 @@ const MenuItems = ({
 }: MenuItemsProps) => {
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
   const { fetchMyCart } = useAppContext();
+
   if (!items || items.length === 0) {
-    return <p className="text-gray-500 py-6 text-center">No menu items yet.</p>;
-  }
-  const handleDelete = async (itemId: string) => {
-    const confirm = window.confirm(
-      "Are you sure you want to delete this item?",
+    return (
+      <EmptyState
+        icon={<SteamBowl size={56} />}
+        title={isSeller ? "Your menu is empty" : "No dishes yet"}
+        body={
+          isSeller
+            ? "Add your first dish and start taking orders."
+            : "This kitchen hasn't listed anything yet. Check back soon."
+        }
+      />
     );
+  }
+
+  const handleDelete = async (itemId: string) => {
+    const confirm = window.confirm("Delete this item from the menu?");
     if (!confirm) return;
     try {
       await axios.delete(`${restaurantService}/api/item/${itemId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: authHeaders(),
       });
-      toast.success("Menu item deleted successfully");
+      toast.success("Item deleted");
       onItemDeleted();
     } catch (error) {
       console.log(error);
       toast.error("Problem in deleting menu item");
     }
   };
+
   const toggleAvailability = async (itemId: string) => {
     try {
       const { data } = await axios.put(
         `${restaurantService}/api/item/status/${itemId}`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
+        { headers: authHeaders() },
       );
       toast.success(data.message);
       onItemDeleted();
@@ -65,6 +77,7 @@ const MenuItems = ({
       }
     }
   };
+
   const addToCart = async (restaurantId: string | undefined, itemId: string) => {
     if (!restaurantId) {
       toast.error("Restaurant information is missing");
@@ -74,17 +87,10 @@ const MenuItems = ({
       setLoadingItemId(itemId);
       await axios.post(
         `${restaurantService}/api/cart/add`,
-        {
-          restaurantId,
-          itemId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
+        { restaurantId, itemId },
+        { headers: authHeaders() },
       );
-      toast.success("Item added to cart successfully");
+      toast.success("Added to cart");
       fetchMyCart();
     } catch (error: unknown) {
       console.error(error);
@@ -98,105 +104,106 @@ const MenuItems = ({
       setLoadingItemId(null);
     }
   };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map((item) => (
-        <div
-          key={item._id}
-          onClick={() => !isSeller && onItemClick?.(item)}
-          className={`flex gap-4 rounded-xl p-4 shadow-sm border ${
-            !item.isAvailable
-              ? "bg-gray-50 border-gray-200 opacity-80"
-              : "bg-white border-gray-100"
-          } ${!isSeller ? "cursor-pointer hover:shadow-md transition" : ""}`}
-        >
-          <div className="relative shrink-0 w-20 h-20">
-            {item.image ? (
-              <img
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {items.map((item) => {
+        const unavailable = !item.isAvailable;
+        return (
+          <article
+            key={item._id}
+            onClick={() => !isSeller && onItemClick?.(item)}
+            className={`card-flat flex gap-4 p-4 transition-all ${
+              unavailable ? "opacity-70" : ""
+            } ${
+              !isSeller
+                ? "cursor-pointer hover:-translate-0.5 hover:shadow-pop-sm"
+                : ""
+            }`}
+          >
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border-2 border-ink">
+              <FoodImage
                 src={item.image}
                 alt={item.name}
-                className={`w-20 h-20 object-cover rounded-lg ${
-                  !item.isAvailable ? "grayscale brightness-75" : ""
+                width={300}
+                className={`h-full w-full object-cover ${
+                  unavailable ? "grayscale" : ""
                 }`}
               />
-            ) : (
-              <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
-                No Image
-              </div>
-            )}
-            {!item.isAvailable && (
-              <div className="absolute inset-0 rounded-lg bg-black/35 flex items-center justify-center">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-white px-2 py-1 rounded bg-black/50">
-                  Not Available
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col flex-1 text-left min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-gray-900 truncate">
-                {item.name}
-              </h3>
-              {isSeller && (
-                <button
-                  title="Edit"
-                  className="text-gray-500 hover:text-[#E23774] shrink-0"
-                >
-                  <BiEdit size={18} />
-                </button>
+              {unavailable && (
+                <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
+                  <span className="rounded-full bg-paper px-2 py-0.5 text-[9px] font-black tracking-wide uppercase">
+                    Sold out
+                  </span>
+                </div>
               )}
             </div>
-            <p className="text-xs text-gray-500 line-clamp-2">
-              {item.description || "No description"}
-            </p>
-            <p className="text-[#E23774] font-semibold mt-1">₹{item.price}</p>
 
-            {isSeller && (
-              <div className="mt-3 flex items-center justify-between border-t pt-2">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <h3 className="font-display truncate text-base font-bold">
+                {item.name}
+              </h3>
+              <p className="mt-0.5 line-clamp-2 text-xs font-medium text-smoke">
+                {item.description || "No description"}
+              </p>
+              <p className="mt-1 text-base font-extrabold text-tomato">
+                ₹{item.price}
+              </p>
+
+              {isSeller && (
+                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                  <button
+                    onClick={() => toggleAvailability(item._id)}
+                    className={`chip cursor-pointer transition-transform hover:-translate-y-0.5 ${
+                      item.isAvailable ? "bg-mint" : "bg-mist"
+                    }`}
+                    title="Toggle availability"
+                  >
+                    {item.isAvailable ? (
+                      <>
+                        <BiMinus className="h-3.5 w-3.5" /> Pause item
+                      </>
+                    ) : (
+                      <>
+                        <BiPlus className="h-3.5 w-3.5" /> Resume item
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className="btn-danger-ghost !rounded-lg !border-2 !border-transparent !p-1.5 hover:!border-tomato"
+                    onClick={() => handleDelete(item._id)}
+                    title="Delete item"
+                    aria-label={`Delete ${item.name}`}
+                  >
+                    <BiTrash className="h-4.5 w-4.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!isSeller && (
+              <div className="flex shrink-0 items-end">
                 <button
-                  onClick={() => toggleAvailability(item._id)}
-                  title="Toggle availability"
-                  className="flex items-center gap-1 text-xs text-gray-600 hover:text-[#E23774]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToCart(restaurantId ?? item.restaurantId, item._id);
+                  }}
+                  disabled={unavailable || loadingItemId === item._id}
+                  className="btn-primary !rounded-full !px-4 !py-1.5 !text-xs"
+                  aria-label={`Add ${item.name} to cart`}
                 >
-                  {item.isAvailable ? (
-                    <BiToggleRight size={22} className="text-green-600" />
+                  {loadingItemId === item._id ? (
+                    <Spinner size={14} className="text-white" />
                   ) : (
-                    <BiToggleLeft size={22} className="text-gray-400" />
+                    <BiPlus className="h-4 w-4" />
                   )}
-                  <span>{item.isAvailable ? "Available" : "Unavailable"}</span>
-                </button>
-                <button
-                  className="text-xs font-medium text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(item._id)}
-                >
-                  Delete
+                  Add
                 </button>
               </div>
             )}
-          </div>
-          {!isSeller && (
-            <div className="flex items-center shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToCart(restaurantId ?? item.restaurantId, item._id);
-                }}
-                disabled={!item.isAvailable || loadingItemId === item._id}
-                title="Add to cart"
-                className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  !item.isAvailable
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-[#E23774] text-white hover:bg-[#c92e64]"
-                } ${loadingItemId === item._id ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <BiCartAdd size={18} />
-                <span>Add</span>
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 };

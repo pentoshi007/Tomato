@@ -57,7 +57,7 @@ const Routing = ({
     const control = routing.control({
       waypoints: [L.latLng(from[0], from[1]), L.latLng(to[0], to[1])],
       lineOptions: {
-        styles: [{ color: "#E23774", weight: 5, opacity: 0.9 }],
+        styles: [{ color: "#E23744", weight: 5, opacity: 0.95 }],
       },
       addWaypoints: false,
       draggableWaypoints: false,
@@ -95,27 +95,21 @@ const UserOrderMap = ({ riderLocation, deliveryLocation }: Props) => {
   const locationStatus = riderLocation ? "Live" : "Locating rider...";
 
   return (
-    <section className="mx-auto mt-6 w-full max-w-6xl px-4 pb-6">
-      <div className="overflow-hidden rounded-[28px] border border-[#f7d0dc] bg-white p-2 shadow-sm">
+    <section className="mt-6">
+      <div className="card overflow-hidden p-2">
         <div className="flex items-center justify-between gap-4 px-3 pb-3 pt-2 sm:px-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+            <p className="text-[10px] font-black tracking-[0.2em] text-smoke uppercase">
               Live delivery
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-gray-900">
+            <h2 className="font-display mt-1 text-xl font-extrabold tracking-tight">
               Track your order
             </h2>
           </div>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
-              riderLocation
-                ? "bg-[#fff7fa] text-[#E23774] ring-[#f7d0dc]"
-                : "bg-gray-50 text-gray-600 ring-gray-200"
-            }`}
-          >
+          <span className={`chip ${riderLocation ? "bg-mint" : "bg-butter"}`}>
             <span
-              className={`h-2 w-2 rounded-full ${
-                riderLocation ? "bg-[#E23774]" : "bg-gray-400"
+              className={`h-2 w-2 rounded-full border border-ink ${
+                riderLocation ? "bg-basil" : "bg-mustard"
               }`}
             />
             {locationStatus}
@@ -127,7 +121,7 @@ const UserOrderMap = ({ riderLocation, deliveryLocation }: Props) => {
             center={mapCenter}
             zoom={14}
             scrollWheelZoom
-            className="h-[420px] w-full rounded-2xl"
+            className="h-[320px] w-full rounded-xl sm:h-[420px]"
           >
             <TileLayer
               attribution="© OpenStreetMap contributors"
@@ -146,7 +140,7 @@ const UserOrderMap = ({ riderLocation, deliveryLocation }: Props) => {
             )}
           </MapContainer>
           {!riderLocation && (
-            <div className="pointer-events-none absolute bottom-4 left-4 max-w-xs rounded-xl bg-white/95 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-200">
+            <div className="pointer-events-none absolute bottom-4 left-4 z-[500] max-w-xs rounded-xl border-2 border-ink bg-paper px-3 py-2 text-xs font-bold shadow-pop-xs">
               Waiting for rider location...
             </div>
           )}

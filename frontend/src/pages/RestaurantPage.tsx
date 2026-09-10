@@ -8,10 +8,37 @@ import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import MenuItemModal from "../components/MenuItemModal";
 import { useAppContext } from "../context/AppContext";
+import { Skeleton, EmptyState } from "../components/ui/primitives";
+import { TomatoMark } from "../components/ui/Logo";
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
+
+const RestaurantPageSkeleton = () => (
+  <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+    <div className="card overflow-hidden">
+      <Skeleton className="h-44 w-full !rounded-none sm:h-56" />
+      <div className="space-y-3 p-5">
+        <Skeleton className="h-7 w-1/2" />
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card-flat flex gap-4 p-4">
+          <Skeleton className="h-24 w-24 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const RestaurantPage = () => {
   const { id } = useParams();
@@ -55,7 +82,7 @@ const RestaurantPage = () => {
         { restaurantId: id, itemId: item._id },
         { headers: authHeaders() },
       );
-      toast.success("Item added to cart successfully");
+      toast.success("Added to cart");
       fetchMyCart();
       setSelectedItem(null);
     } catch (error: unknown) {
@@ -71,18 +98,33 @@ const RestaurantPage = () => {
     }
   };
 
-  if (loading) return <div className="p-4">Loading restaurant ...</div>;
-  if (!restaurant) return <div className="p-4">Restaurant not found.</div>;
+  if (loading) return <RestaurantPageSkeleton />;
+  if (!restaurant)
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <EmptyState
+          icon={<TomatoMark size={52} />}
+          title="Restaurant not found"
+          body="This kitchen may have closed shop or the link is wrong."
+        />
+      </div>
+    );
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="mx-auto max-w-4xl space-y-8 px-4 py-6">
       <RestaurantProfile
         restaurant={restaurant}
         isSeller={false}
         onUpdate={setRestaurant}
       />
-      <div className="mx-auto max-w-5xl rounded-xl bg-white shadow-sm p-4">
-        <h2 className="mb-3 text-lg font-semibold">Menu</h2>
+
+      <section>
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="font-display text-2xl font-extrabold tracking-tight">
+            The menu
+          </h2>
+          <span className="chip bg-butter">{menuItems.length} dishes</span>
+        </div>
         <MenuItems
           items={menuItems}
           restaurantId={id}
@@ -90,7 +132,8 @@ const RestaurantPage = () => {
           onItemDeleted={() => {}}
           onItemClick={setSelectedItem}
         />
-      </div>
+      </section>
+
       {selectedItem && (
         <MenuItemModal
           item={selectedItem}
