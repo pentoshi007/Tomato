@@ -11,12 +11,23 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { restaurantService, utilsService } from "../config";
 import L from "leaflet";
-import { LuLocateFixed, LuMapPin, LuPhone, LuTrash2, LuLoaderCircle, LuPlus, LuCircleCheck, LuInfo } from "react-icons/lu";
+import {
+  LuLocateFixed,
+  LuMapPin,
+  LuPhone,
+  LuTrash2,
+  LuLoaderCircle,
+  LuCircleCheck,
+  LuInfo,
+} from "react-icons/lu";
+import { BiArrowBack } from "react-icons/bi";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "../components/ui/primitives";
 
 const mapTileUrl = import.meta.env.VITE_MAP_TILE_URL;
 const openStreetMapCopyrightUrl = import.meta.env.VITE_OPENSTREETMAP_COPYRIGHT_URL;
 
-// 🔧 Fix leaflet default marker icons
+// Fix leaflet default marker icons
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
   ._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -31,9 +42,7 @@ interface Address {
   mobile: number;
 }
 
-// ──────────────────────────────────────────────
-// Sub-components (must live inside MapContainer)
-// ──────────────────────────────────────────────
+// ── Sub-components (must live inside MapContainer) ──
 
 const LocationPicker = ({
   setLocation,
@@ -86,23 +95,22 @@ const LocateMeButton = ({
       aria-label="Use my current location"
       title="Use my current location"
       style={{ zIndex: 1000, position: "absolute", top: "12px", right: "12px" }}
-      className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-md ring-1 ring-gray-200 transition-all hover:bg-gray-50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E23744] disabled:opacity-60"
+      className="btn-secondary !py-1.5 !text-xs"
     >
       {locating ? (
-        <LuLoaderCircle size={15} className="animate-spin text-[#E23744]" />
+        <LuLoaderCircle size={14} className="animate-spin text-tomato" />
       ) : (
-        <LuLocateFixed size={15} className="text-[#E23744]" />
+        <LuLocateFixed size={14} className="text-tomato" />
       )}
       {locating ? "Locating…" : "Use current location"}
     </button>
   );
 };
 
-// ──────────────────────────────────────────────
-// Main page
-// ──────────────────────────────────────────────
+// ── Main page ──
 
 const AddAddressPage = () => {
+  const navigate = useNavigate();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -110,23 +118,19 @@ const AddAddressPage = () => {
   const [locating, setLocating] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
 
-  // Form state
   const [mobile, setMobile] = useState("");
   const [mobileError, setMobileError] = useState("");
   const [formattedAddress, setFormattedAddress] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
 
-  const mobileInputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // ── Reverse geocoding (debounced 600 ms, with AbortController) ──────────
+  // Reverse geocoding (debounced 600 ms, with AbortController)
   const fetchFormattedAddress = useCallback((lat: number, lng: number) => {
-    // Cancel any pending debounce
     if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current);
-    // Cancel any in-flight request
     if (abortControllerRef.current) abortControllerRef.current.abort();
 
     setGeocoding(true);
@@ -136,13 +140,10 @@ const AddAddressPage = () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
       try {
-        const { data } = await axios.get(
-          `${utilsService}/api/geocode/reverse`,
-          {
-            params: { lat, lon: lng },
-            signal: controller.signal,
-          },
-        );
+        const { data } = await axios.get(`${utilsService}/api/geocode/reverse`, {
+          params: { lat, lon: lng },
+          signal: controller.signal,
+        });
         setFormattedAddress(data.display_name || "");
       } catch (err: unknown) {
         if (
@@ -152,7 +153,6 @@ const AddAddressPage = () => {
           return; // superseded by newer click
         }
         console.warn("Geocoding failed:", err);
-        // Don't toast — let user type address manually instead
         setFormattedAddress("");
       } finally {
         if (abortControllerRef.current === controller) {
@@ -163,7 +163,6 @@ const AddAddressPage = () => {
     }, 600);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current);
@@ -177,7 +176,6 @@ const AddAddressPage = () => {
     fetchFormattedAddress(lat, lng);
   };
 
-  // ── Phone validation ──────────────────────────
   const validateMobile = (value: string) => {
     if (!value) return "Mobile number is required";
     if (!/^\d{10,15}$/.test(value)) return "Enter a valid 10–15 digit number";
@@ -190,7 +188,6 @@ const AddAddressPage = () => {
     setMobileError(validateMobile(val));
   };
 
-  // ── Fetch saved addresses ─────────────────────
   const fetchAddresses = async () => {
     try {
       const { data } = await axios.get(`${restaurantService}/api/address/get`, {
@@ -209,31 +206,42 @@ const AddAddressPage = () => {
     fetchAddresses();
   }, []);
 
-  // ── Add address ───────────────────────────────
   const addAddress = async () => {
     const phoneErr = validateMobile(mobile);
     if (phoneErr) {
       setMobileError(phoneErr);
-      mobileInputRef.current?.focus();
+      toast.error(phoneErr);
       return;
     }
-    if (!formattedAddress || latitude === null || longitude === null) {
-      toast.error("Please pin a location on the map first");
+    if (latitude === null || longitude === null) {
+      toast.error("Please pin your location on the map");
       return;
     }
+    if (!formattedAddress.trim()) {
+      toast.error("Please enter or confirm your address");
+      return;
+    }
+
     try {
       setAdding(true);
       await axios.post(
-        `${restaurantService}/api/address/new`,
-        { formattedAddress, mobile, latitude, longitude },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
+        `${restaurantService}/api/address/add`,
+        {
+          formattedAddress: formattedAddress.trim(),
+          mobile: Number(mobile),
+          latitude,
+          longitude,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
-      toast.success("Address saved successfully!");
+      toast.success("Address saved");
       setMobile("");
+      setMobileError("");
       setFormattedAddress("");
       setLatitude(null);
       setLongitude(null);
-      setMobileError("");
       fetchAddresses();
     } catch (error: unknown) {
       const message = axios.isAxiosError(error)
@@ -247,7 +255,6 @@ const AddAddressPage = () => {
     }
   };
 
-  // ── Delete address ────────────────────────────
   const deleteAddress = async (id: string) => {
     if (!window.confirm("Remove this address?")) return;
     try {
@@ -264,45 +271,49 @@ const AddAddressPage = () => {
     }
   };
 
-  // ── Derived state ─────────────────────────────
   const locationPinned = latitude !== null && longitude !== null;
-  const canSave = locationPinned && !geocoding && !!formattedAddress && !!mobile && !mobileError;
+  const canSave =
+    locationPinned && !geocoding && !!formattedAddress && !!mobile && !mobileError;
 
-  // ── Steps guide ───────────────────────────────
   const steps = [
-    { id: 1, label: "Pin location on map", done: locationPinned },
-    { id: 2, label: "Confirm address text", done: !!formattedAddress && !geocoding },
-    { id: 3, label: "Enter mobile number", done: !!mobile && !mobileError },
+    { id: 1, label: "Pin location", done: locationPinned },
+    { id: 2, label: "Confirm address", done: !!formattedAddress && !geocoding },
+    { id: 3, label: "Add mobile", done: !!mobile && !mobileError },
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
-      {/* ── Header ── */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Delivery Address</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Pin your location on the map and save it for future orders.
-        </p>
+    <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="btn-secondary !rounded-full !p-2"
+          aria-label="Go back"
+        >
+          <BiArrowBack className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">
+            Drop the pin
+          </h1>
+          <p className="text-sm font-medium text-smoke">
+            Tell us exactly where the food should land.
+          </p>
+        </div>
       </div>
 
-      {/* ── Step indicators ── */}
-      <ol
-        aria-label="Steps to add an address"
-        className="flex items-center gap-3 flex-wrap"
-      >
+      {/* Step indicators */}
+      <ol aria-label="Steps to add an address" className="flex flex-wrap items-center gap-2">
         {steps.map((step) => (
           <li
             key={step.id}
-            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-              step.done
-                ? "bg-green-50 text-green-700 ring-1 ring-green-200"
-                : "bg-gray-100 text-gray-500"
+            className={`chip transition-colors ${
+              step.done ? "bg-mint" : "bg-paper text-smoke"
             }`}
           >
             {step.done ? (
-              <LuCircleCheck size={13} className="shrink-0" />
+              <LuCircleCheck size={13} className="shrink-0 text-basil" />
             ) : (
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-300 text-[10px] text-white font-bold">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] font-black text-cream">
                 {step.id}
               </span>
             )}
@@ -311,21 +322,19 @@ const AddAddressPage = () => {
         ))}
       </ol>
 
-      {/* ── Map section ── */}
+      {/* Map */}
       <section aria-labelledby="map-heading">
         <h2 id="map-heading" className="sr-only">
-          Location Map
+          Location map
         </h2>
-
-        {/* Hint banner */}
-        <div className="mb-2 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 ring-1 ring-blue-100">
-          <LuInfo size={14} className="shrink-0" />
-          Click anywhere on the map to pin your delivery location, or use the button to auto-detect.
+        <div className="mb-3 flex items-center gap-2 rounded-xl border-2 border-ink bg-skywash px-3 py-2 text-xs font-bold">
+          <LuInfo size={14} className="shrink-0 text-sky" />
+          Tap anywhere on the map to pin your spot, or auto-detect.
         </div>
 
         <div
-          className="relative overflow-hidden rounded-2xl border border-gray-200 shadow-sm"
-          style={{ cursor: "crosshair", height: "380px" }}
+          className="relative h-[340px] overflow-hidden rounded-2xl border-2 border-ink shadow-pop sm:h-[380px]"
+          style={{ cursor: "crosshair" }}
           role="application"
           aria-label="Interactive delivery location map. Click to select a location."
         >
@@ -345,20 +354,14 @@ const AddAddressPage = () => {
               locating={locating}
               setLocating={setLocating}
             />
-            {locationPinned && (
-              <Marker position={[latitude!, longitude!]} />
-            )}
+            {locationPinned && <Marker position={[latitude, longitude]} />}
           </MapContainer>
         </div>
       </section>
 
-      {/* ── Address preview / edit ── */}
+      {/* Address preview / edit */}
       <section aria-labelledby="address-label" aria-live="polite" ref={statusRef}>
-        <label
-          id="address-label"
-          htmlFor="formatted-address"
-          className="mb-1.5 block text-sm font-medium text-gray-700"
-        >
+        <label id="address-label" htmlFor="formatted-address" className="label">
           Delivery address
         </label>
 
@@ -366,16 +369,16 @@ const AddAddressPage = () => {
           <div
             role="status"
             aria-live="polite"
-            className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500"
+            className="card-flat flex items-center gap-3 px-4 py-3 text-sm font-medium text-smoke"
           >
-            <LuLoaderCircle size={16} className="animate-spin text-[#E23744]" />
+            <LuLoaderCircle size={16} className="animate-spin text-tomato" />
             Fetching address details…
           </div>
         ) : (
           <div className="relative">
             <LuMapPin
               size={16}
-              className="pointer-events-none absolute left-3 top-3 text-[#E23744]"
+              className="pointer-events-none absolute top-3.5 left-3.5 text-tomato"
             />
             <textarea
               id="formatted-address"
@@ -388,30 +391,26 @@ const AddAddressPage = () => {
               }
               rows={2}
               aria-describedby="address-hint"
-              className="w-full resize-none rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#E23744] focus:outline-none focus:ring-2 focus:ring-[#E23744]/20 transition"
+              className="input resize-none !pl-10"
             />
           </div>
         )}
-        <p id="address-hint" className="mt-1 text-xs text-gray-400">
+        <p id="address-hint" className="mt-1.5 text-xs font-medium text-smoke">
           You can edit this address if it's not precise enough.
         </p>
       </section>
 
-      {/* ── Mobile input ── */}
+      {/* Mobile input */}
       <section>
-        <label
-          htmlFor="mobile-number"
-          className="mb-1.5 block text-sm font-medium text-gray-700"
-        >
+        <label htmlFor="mobile-number" className="label">
           Mobile number
         </label>
         <div className="relative">
           <LuPhone
             size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-smoke"
           />
           <input
-            ref={mobileInputRef}
             id="mobile-number"
             type="tel"
             inputMode="numeric"
@@ -421,64 +420,47 @@ const AddAddressPage = () => {
             aria-invalid={!!mobileError}
             aria-describedby={mobileError ? "mobile-error" : undefined}
             maxLength={15}
-            className={`w-full rounded-xl border py-2.5 pl-9 pr-4 text-sm text-gray-800 placeholder:text-gray-400 transition focus:outline-none focus:ring-2 ${
-              mobileError
-                ? "border-red-400 focus:border-red-400 focus:ring-red-200"
-                : "border-gray-200 focus:border-[#E23744] focus:ring-[#E23744]/20"
-            }`}
+            className={`input !pl-10 ${mobileError ? "!border-tomato" : ""}`}
           />
         </div>
         {mobileError && (
-          <p
-            id="mobile-error"
-            role="alert"
-            className="mt-1 text-xs text-red-600"
-          >
+          <p id="mobile-error" role="alert" className="mt-1.5 text-xs font-bold text-tomato">
             {mobileError}
           </p>
         )}
       </section>
 
-      {/* ── Save button ── */}
       <button
         disabled={adding || !canSave}
         onClick={addAddress}
         aria-label={adding ? "Saving address…" : "Save this delivery address"}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#E23744] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c92f3b] focus:outline-none focus:ring-2 focus:ring-[#E23744] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary w-full !py-3"
       >
         {adding ? (
           <>
-            <LuLoaderCircle size={16} className="animate-spin" />
-            Saving…
+            <LuLoaderCircle size={16} className="animate-spin" /> Saving…
           </>
         ) : (
-          <>
-            <LuPlus size={16} />
-            Save Address
-          </>
+          "Save address"
         )}
       </button>
 
-      {/* ── Saved addresses ── */}
+      {/* Saved addresses */}
       <section aria-labelledby="saved-heading" className="space-y-3 pb-4">
-        <h2 id="saved-heading" className="text-base font-semibold text-gray-900">
-          Saved Addresses
+        <h2 id="saved-heading" className="font-display text-xl font-extrabold tracking-tight">
+          Saved addresses
         </h2>
 
         {loading ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex items-center gap-3 text-sm text-gray-400 py-4"
-          >
-            <LuLoaderCircle size={16} className="animate-spin" />
-            Loading addresses…
+          <div className="space-y-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
           </div>
         ) : addresses.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center">
-            <LuMapPin size={32} className="mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-medium text-gray-500">No addresses saved yet</p>
-            <p className="mt-1 text-xs text-gray-400">
+          <div className="card-flat border-dashed px-6 py-10 text-center">
+            <LuMapPin size={30} className="mx-auto mb-2 text-tomato" />
+            <p className="text-sm font-bold">No addresses saved yet</p>
+            <p className="mt-1 text-xs font-medium text-smoke">
               Pin a location above and save it to see it here.
             </p>
           </div>
@@ -487,20 +469,20 @@ const AddAddressPage = () => {
             {addresses.map((addr) => (
               <li
                 key={addr._id}
-                className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md"
+                className="card-flat flex items-start justify-between gap-4 p-4"
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <span
-                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50"
+                    className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-blush"
                     aria-hidden="true"
                   >
-                    <LuMapPin size={15} className="text-[#E23744]" />
+                    <LuMapPin size={15} />
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-800">
+                    <p className="truncate text-sm font-bold">
                       {addr.formattedAddress}
                     </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                    <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-smoke">
                       <LuPhone size={11} />
                       {addr.mobile}
                     </p>
@@ -511,12 +493,12 @@ const AddAddressPage = () => {
                   onClick={() => deleteAddress(addr._id)}
                   disabled={deletingId === addr._id}
                   aria-label={`Delete address: ${addr.formattedAddress}`}
-                  className="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50"
+                  className="btn-danger-ghost !rounded-lg !p-2"
                 >
                   {deletingId === addr._id ? (
-                    <LuLoaderCircle size={16} className="animate-spin" />
+                    <LuLoaderCircle size={15} className="animate-spin" />
                   ) : (
-                    <LuTrash2 size={16} />
+                    <LuTrash2 size={15} />
                   )}
                 </button>
               </li>

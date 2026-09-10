@@ -2,17 +2,49 @@ import { useAppContext } from "../context/AppContext";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { BiMapPin, BiSearch } from "react-icons/bi";
-import { CgShoppingCart } from "react-icons/cg";
+import { Logo } from "./ui/Logo";
+
+const CartButton = ({ quantity }: { quantity: number }) => (
+  <Link
+    to="/cart"
+    aria-label={`Cart, ${quantity} items`}
+    className="btn-secondary relative !rounded-full !p-2.5"
+  >
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="9" cy="20" r="1.6" />
+      <circle cx="17" cy="20" r="1.6" />
+      <path d="M3 3h2l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h7.9a1.5 1.5 0 0 0 1.5-1.2L20 7H6" />
+    </svg>
+    {quantity > 0 && (
+      <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-mustard px-1 text-[10px] font-black text-ink">
+        {quantity > 99 ? "99+" : quantity}
+      </span>
+    )}
+  </Link>
+);
 
 const Navbar = () => {
-  const { isAuth, city, quantity } = useAppContext();
+  const { isAuth, city, quantity, user } = useAppContext();
   const currLocation = useLocation();
+  const isAuthScreen =
+    currLocation.pathname === "/login" ||
+    currLocation.pathname === "/select-role";
   const isHomePage = currLocation.pathname === "/";
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState(searchParams.get("search") || "");
 
   useEffect(() => {
+    if (isAuthScreen) return;
     const timer = setTimeout(() => {
       if (search.trim() !== "") {
         setSearchParams({ search: search.trim() });
@@ -21,56 +53,66 @@ const Navbar = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [search, setSearchParams]);
+  }, [search, setSearchParams, isAuthScreen]);
+
+  // Auth screens are full-bleed branded experiences — no chrome.
+  if (isAuthScreen) {
+    return null;
+  }
+
+  const searchBar = (
+    <div className="flex w-full items-center rounded-full border-2 border-ink bg-white shadow-pop-xs transition-shadow focus-within:shadow-pop-sm">
+      <div className="flex items-center gap-1.5 border-r-2 border-mist py-2.5 pr-3 pl-4 text-ink">
+        <BiMapPin className="h-4 w-4 shrink-0 text-tomato" />
+        <span className="max-w-20 truncate text-xs font-bold sm:max-w-28">
+          {city ?? "Locating…"}
+        </span>
+      </div>
+      <div className="flex flex-1 items-center gap-2 px-3">
+        <BiSearch className="h-4 w-4 shrink-0 text-smoke" />
+        <input
+          type="text"
+          placeholder="Search restaurants, cravings…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-transparent py-2.5 text-sm font-medium outline-none placeholder:text-smoke/60"
+        />
+      </div>
+    </div>
+  );
 
   return (
-    <div className="w-full bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-3">
-        <Link
-          to="/"
-          className="text-2xl font-bold text-[#E23774] cursor-pointer"
-        >
-          Tomato
+    <header className="sticky top-0 z-40 w-full border-b-2 border-ink bg-cream/95 backdrop-blur-[2px]">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <Link to="/" aria-label="Tomato home" className="shrink-0">
+          <Logo size={34} />
         </Link>
-        <div className="flex items-center gap-2">
-          <Link to={"/cart"} className="relative">
-            <CgShoppingCart className="h-6 w-6  text-[#E23774]" />
-            <span className="absolute -top-2 -right-0 flex items-center justify-center rounded-full bg-red-500 text-white text-xs w-5 h-5 font-semibold">
-              {quantity}
-            </span>
-          </Link>
+
+        {isHomePage && (
+          <div className="hidden max-w-lg flex-1 md:block">{searchBar}</div>
+        )}
+
+        <div className="flex shrink-0 items-center gap-2.5">
+          <CartButton quantity={quantity} />
           {isAuth ? (
-            <Link to={"/account"} className="font-medium text-[#E23774]">
-              Account
+            <Link
+              to="/account"
+              aria-label="Your account"
+              className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink bg-tomato text-sm font-black text-white shadow-pop-xs transition-transform hover:-translate-0.5 hover:shadow-pop-sm"
+            >
+              {user?.name?.charAt(0).toUpperCase() ?? "?"}
             </Link>
           ) : (
-            <Link to={"/login"} className="font-medium text-[#E23774]">
-              Login
+            <Link to="/login" className="btn-primary !rounded-full">
+              Log in
             </Link>
           )}
         </div>
       </div>
       {isHomePage && (
-        <div className="border-t px-4 py-3">
-          <div className="mx-auto flex max-w-7xl items-center rounded-lg border shadow-sm">
-            <div className="flex items-center gap-2 px-3 border-r text-gray-700">
-              <BiMapPin className="h-4 w-4 text-[#E23774]" />
-              <span className="text-sm truncate max-w-35">{city}</span>
-            </div>
-            <div className="flex flex-1 items-center gap-2 px-3">
-              <BiSearch className="h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search for restaurants"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full outline-none text-sm py-2 placeholder:text-gray-400"
-              />
-            </div>
-          </div>
-        </div>
+        <div className="px-4 pb-3 md:hidden">{searchBar}</div>
       )}
-    </div>
+    </header>
   );
 };
 

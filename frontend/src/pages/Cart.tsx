@@ -12,6 +12,10 @@ import {
   PLATFORM_FEE,
   FREE_DELIVERY_THRESHOLD,
 } from "../utils/pricing";
+import { BiMinus, BiPlus, BiTrash, BiArrowBack } from "react-icons/bi";
+import { FoodImage } from "../components/ui/FoodImage";
+import { EmptyState, Spinner } from "../components/ui/primitives";
+import { Fries } from "../components/ui/illustrations";
 
 const getMenuItem = (item: ICart): IMenuItem | null =>
   typeof item.itemId === "object" ? item.itemId : null;
@@ -19,7 +23,9 @@ const getMenuItem = (item: ICart): IMenuItem | null =>
 const getItemId = (item: ICart): string =>
   typeof item.itemId === "string" ? item.itemId : item.itemId._id;
 
-const TOMATO_COLOR = "#E23744"; // Tomato logo color
+const authHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
 
 const Cart = () => {
   const { cart, subTotal, fetchMyCart } = useAppContext();
@@ -29,8 +35,17 @@ const Cart = () => {
 
   if (!cart || cart.length === 0) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-gray-500 text-center text-lg">Your cart is empty</p>
+      <div className="mx-auto max-w-md px-4 py-16">
+        <EmptyState
+          icon={<Fries size={72} />}
+          title="Your cart is hungry"
+          body="Add something delicious and it will show up here."
+          action={
+            <button onClick={() => navigate("/")} className="btn-primary">
+              Browse food
+            </button>
+          }
+        />
       </div>
     );
   }
@@ -39,63 +54,36 @@ const Cart = () => {
   const deliveryFee = getDeliveryFee(subTotal);
   const platformFee = PLATFORM_FEE;
   const grandTotal = getGrandTotal(subTotal);
+  const amountForFreeDelivery = getAmountForFreeDelivery(subTotal);
+  const freeDeliveryProgress = Math.min(100, (subTotal / FREE_DELIVERY_THRESHOLD) * 100);
 
-  const increaseQuantity = async (itemId: string) => {
+  const changeQuantity = async (itemId: string, direction: "incr" | "decr") => {
     try {
       setLoadingItemId(itemId);
       await axios.put(
-        `${restaurantService}/api/cart/incr`,
+        `${restaurantService}/api/cart/${direction}`,
         { itemId },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
+        { headers: authHeaders() },
       );
       fetchMyCart();
-      toast.success("Quantity increased successfully");
     } catch (error) {
       console.log(error);
-      toast.error("Problem in increasing quantity");
-    } finally {
-      setLoadingItemId(null);
-    }
-  };
-
-  const decreaseQuantity = async (itemId: string) => {
-    try {
-      setLoadingItemId(itemId);
-      await axios.put(
-        `${restaurantService}/api/cart/decr`,
-        { itemId },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
-      );
-      fetchMyCart();
-      toast.success("Quantity decreased successfully");
-    } catch (error) {
-      console.log(error);
-      toast.error("Problem in decreasing quantity");
+      toast.error("Problem in updating quantity");
     } finally {
       setLoadingItemId(null);
     }
   };
 
   const clearCart = async () => {
-    const confirm = window.confirm("Are you sure you want to clear your cart?");
+    const confirm = window.confirm("Clear your whole cart?");
     if (!confirm) return;
     try {
       setClearingCart(true);
       await axios.delete(`${restaurantService}/api/cart/clear`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: authHeaders(),
       });
       fetchMyCart();
-      toast.success("Cart cleared successfully");
+      toast.success("Cart cleared");
     } catch (error) {
       console.log(error);
       toast.error("Problem in clearing cart");
@@ -108,124 +96,172 @@ const Cart = () => {
     navigate("/checkout", { state: { cart } });
   };
 
-  // Calculate amount needed for free delivery
-  const amountForFreeDelivery = getAmountForFreeDelivery(subTotal);
-
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-      <div className="rounded-xl bg-white shadow-sm p-4 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">{restaurant.name}</h2>
-          <p className="text-sm text-gray-500">
-            {restaurant.autoLocation.formattedAddress}
-          </p>
-        </div>
+    <div className="mx-auto max-w-5xl px-4 py-6 pb-32 md:pb-10">
+      <div className="mb-6 flex items-center gap-3">
         <button
-          onClick={() => navigate(`/restaurant/${restaurant._id}`)}
-          className="shrink-0 text-sm font-semibold hover:opacity-80 transition"
-          style={{ color: TOMATO_COLOR }}
+          onClick={() => navigate(-1)}
+          className="btn-secondary !rounded-full !p-2"
+          aria-label="Go back"
         >
-          Go to Menu
+          <BiArrowBack className="h-5 w-5" />
         </button>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">
+          Your tray
+        </h1>
+        <span className="chip bg-mustard">{cart.length} items</span>
       </div>
-      <div className="space-y-4">
-        {cart.map((item: ICart) => {
-          const itemData = getMenuItem(item);
-          const itemId = getItemId(item);
-          return (
-            <div
-              key={itemId}
-              className="flex items-center justify-between border-b py-3"
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-4">
+          <div className="card-flat flex items-center justify-between gap-4 p-4">
+            <div className="min-w-0">
+              <p className="text-xs font-black tracking-widest text-smoke uppercase">
+                Ordering from
+              </p>
+              <h2 className="font-display mt-1 truncate text-lg font-bold">
+                {restaurant.name}
+              </h2>
+              <p className="truncate text-xs font-medium text-smoke">
+                {restaurant.autoLocation.formattedAddress}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate(`/restaurant/${restaurant._id}`)}
+              className="btn-secondary shrink-0 !py-1.5 !text-xs"
             >
-              <div className="flex items-center gap-3">
-                {itemData && (
-                  <img
-                    src={itemData.image}
-                    alt={itemData.name}
-                    className="w-10 h-10 rounded-full object-cover"
+              Add more
+            </button>
+          </div>
+
+          {cart.map((item: ICart) => {
+            const itemData = getMenuItem(item);
+            const itemId = getItemId(item);
+            const busy = loadingItemId === itemId;
+            return (
+              <div
+                key={itemId}
+                className="card-flat flex items-center gap-4 p-4"
+              >
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 border-ink">
+                  <FoodImage
+                    src={itemData?.image}
+                    alt={itemData?.name ?? "Item"}
+                    width={200}
+                    className="h-full w-full object-cover"
                   />
-                )}
-                <div>
-                  <div className="font-medium">
-                    {itemData?.name || "Unknown Item"}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    ₹{itemData?.price ?? ""}
-                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-bold">
+                    {itemData?.name || "Unknown item"}
+                  </h3>
+                  <p className="text-xs font-semibold text-smoke">
+                    ₹{itemData?.price ?? ""} each
+                  </p>
+                  <p className="mt-0.5 text-sm font-extrabold text-tomato">
+                    ₹{((itemData?.price ?? 0) * item.quantity).toFixed(0)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink bg-paper p-1 shadow-pop-xs">
+                  <button
+                    disabled={busy}
+                    onClick={() => changeQuantity(itemId, "decr")}
+                    className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-mist disabled:opacity-40"
+                    aria-label="Decrease quantity"
+                  >
+                    {busy ? <Spinner size={12} /> : <BiMinus className="h-4 w-4" />}
+                  </button>
+                  <span className="w-6 text-center text-sm font-black">
+                    {item.quantity}
+                  </span>
+                  <button
+                    disabled={busy}
+                    onClick={() => changeQuantity(itemId, "incr")}
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-tomato text-white transition-colors hover:bg-tomato-deep disabled:opacity-40"
+                    aria-label="Increase quantity"
+                  >
+                    {busy ? <Spinner size={12} className="text-white" /> : <BiPlus className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={loadingItemId === itemId}
-                  onClick={() => decreaseQuantity(itemId)}
-                  className="w-7 h-7 bg-gray-200 rounded disabled:opacity-50"
-                >
-                  -
-                </button>
-                <span className="mx-2">{item.quantity}</span>
-                <button
-                  disabled={loadingItemId === itemId}
-                  onClick={() => increaseQuantity(itemId)}
-                  className="w-7 h-7 bg-gray-200 rounded disabled:opacity-50"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-8 bg-white rounded-xl shadow-sm p-4">
-        <div className="flex justify-between mb-2">
-          <span>Subtotal</span>
-          <span>₹{subTotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between mb-2">
-          <span>Delivery Fee</span>
-          <span>
-            {deliveryFee === 0 ? (
-              <span style={{ color: TOMATO_COLOR, fontWeight: 600 }}>Free</span>
-            ) : (
-              <>₹{deliveryFee.toFixed(2)}</>
-            )}
-          </span>
-        </div>
-        {/* Show only text for 250+ order */}
-        {subTotal < FREE_DELIVERY_THRESHOLD && (
-          <div className="mb-2 mt-[-0.5rem]">
-            <span
-              className="text-sm"
-              style={{ color: TOMATO_COLOR, fontWeight: 500 }}
-            >
-              Add items worth ₹{amountForFreeDelivery.toFixed(2)} for{" "}
-              <span className="font-semibold">free delivery</span>
-            </span>
-          </div>
-        )}
-        <div className="flex justify-between mb-2">
-          <span>Platform Fee</span>
-          <span>₹{platformFee.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between font-semibold text-lg mt-2 border-t pt-2">
-          <span>Grand Total</span>
-          <span>₹{grandTotal.toFixed(2)}</span>
-        </div>
-        <div className="flex gap-2 mt-4">
+            );
+          })}
+
           <button
             onClick={clearCart}
             disabled={clearingCart}
-            className="bg-gray-200 text-gray-800 w-40 h-15 rounded px-3 py-2 font-medium hover:bg-gray-300 transition disabled:opacity-50"
+            className="btn-danger-ghost !text-xs"
           >
-            {clearingCart ? "Clearing..." : "Clear Cart"}
-          </button>
-          <button
-            onClick={checkout}
-            className={`bg-[#e00d57] text-white rounded w-full px-3 py-2 font-medium hover:bg-[#c92e64] transition ${restaurant.isOpen ? "opacity-100" : "opacity-50 cursor-not-allowed"}`}
-            disabled={!restaurant.isOpen}
-          >
-            {restaurant.isOpen ? "Checkout" : "Restaurant is closed"}
+            <BiTrash className="h-4 w-4" />
+            {clearingCart ? "Clearing…" : "Clear tray"}
           </button>
         </div>
+
+        <aside className="card h-fit p-5 lg:sticky lg:top-24">
+          <h2 className="font-display text-lg font-bold">The bill</h2>
+
+          <div className="mt-4 space-y-2.5 text-sm font-medium">
+            <div className="flex justify-between">
+              <span className="text-smoke">Subtotal</span>
+              <span className="font-bold">₹{subTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-smoke">Delivery fee</span>
+              {deliveryFee === 0 ? (
+                <span className="font-black text-basil">FREE</span>
+              ) : (
+                <span className="font-bold">₹{deliveryFee.toFixed(2)}</span>
+              )}
+            </div>
+            <div className="flex justify-between">
+              <span className="text-smoke">Platform fee</span>
+              <span className="font-bold">₹{platformFee.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {subTotal < FREE_DELIVERY_THRESHOLD && (
+            <div className="mt-4 rounded-xl border-2 border-dashed border-ink bg-butter p-3">
+              <p className="text-xs font-bold">
+                Add ₹{amountForFreeDelivery.toFixed(0)} more for{" "}
+                <span className="text-tomato">free delivery</span>
+              </p>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-ink bg-paper">
+                <div
+                  className="h-full bg-mustard transition-all duration-500"
+                  style={{ width: `${freeDeliveryProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex justify-between border-t-2 border-ink pt-3">
+            <span className="font-display text-lg font-bold">Total</span>
+            <span className="font-display text-lg font-extrabold text-tomato">
+              ₹{grandTotal.toFixed(2)}
+            </span>
+          </div>
+
+          <button
+            onClick={checkout}
+            className="btn-primary mt-4 hidden w-full !py-3 lg:flex"
+            disabled={!restaurant.isOpen}
+          >
+            {restaurant.isOpen ? "Go to checkout" : "Restaurant is closed"}
+          </button>
+        </aside>
+      </div>
+
+      {/* Sticky checkout bar — mobile */}
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-paper p-3 md:hidden">
+        <button
+          onClick={checkout}
+          disabled={!restaurant.isOpen}
+          className="btn-primary w-full !py-3"
+        >
+          {restaurant.isOpen
+            ? `Checkout · ₹${grandTotal.toFixed(0)}`
+            : "Restaurant is closed"}
+        </button>
       </div>
     </div>
   );

@@ -115,6 +115,7 @@ export interface AppContextType {
   location: Location | null;
   loadingLocation: boolean;
   city: string | null;
+  retryLocation: () => void;
 
   cart: ICart[];
   subTotal: number;

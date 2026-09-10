@@ -3,7 +3,7 @@ import { useSocket } from "../context/useSocket";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { restaurantService, realtimeService } from "../config";
-import { BiArrowBack, BiMapPin } from "react-icons/bi";
+import { BiArrowBack, BiMapPin, BiPhone } from "react-icons/bi";
 import type { IOrder } from "../types";
 import UserOrderMap from "../components/UserOrderMap";
 import {
@@ -15,9 +15,8 @@ import {
   getOrderStatusLabel,
   isActiveOrder,
 } from "../utils/orderflow";
-
-const TOMATO = "#E23744";
-
+import { Skeleton, EmptyState } from "../components/ui/primitives";
+import { TomatoMark } from "../components/ui/Logo";
 
 function ProgressBar({ status }: { status: IOrder["status"] }) {
   const currentIdx = ORDER_PROGRESS_STEPS.indexOf(status);
@@ -31,14 +30,18 @@ function ProgressBar({ status }: { status: IOrder["status"] }) {
           return (
             <div key={step} className="flex flex-1 items-center">
               <div
-                className={`h-3 w-3 shrink-0 rounded-full transition-all ${
-                  done ? "bg-[#E23744]" : "border border-slate-300 bg-white"
-                } ${isCurrent ? "ring-4 ring-rose-100" : ""}`}
-              />
+                className={`relative flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 border-ink transition-colors ${
+                  done ? "bg-tomato" : "bg-paper"
+                }`}
+              >
+                {isCurrent && (
+                  <span className="animate-ping-dot absolute inset-0 rounded-full bg-tomato" />
+                )}
+              </div>
               {i < ORDER_PROGRESS_STEPS.length - 1 && (
                 <div
-                  className={`h-0.5 flex-1 transition-all ${
-                    i < currentIdx ? "bg-[#E23744]" : "bg-slate-200"
+                  className={`h-1 flex-1 border-y border-ink transition-colors ${
+                    i < currentIdx ? "bg-tomato" : "bg-mist"
                   }`}
                 />
               )}
@@ -46,7 +49,7 @@ function ProgressBar({ status }: { status: IOrder["status"] }) {
           );
         })}
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] text-slate-400">
+      <div className="mt-1.5 flex justify-between text-[10px] font-bold tracking-wide text-smoke uppercase">
         <span>Placed</span>
         <span>On the way</span>
         <span>Delivered</span>
@@ -163,29 +166,29 @@ export default function OrderPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-2xl space-y-3 px-4 py-8">
-          <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
-          <div className="h-32 animate-pulse rounded-lg bg-slate-100" />
-          <div className="h-48 animate-pulse rounded-lg bg-slate-100" />
-          <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
-        </div>
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
+        <Skeleton className="h-9 w-32" />
+        <Skeleton className="h-36 w-full !rounded-2xl" />
+        <Skeleton className="h-48 w-full !rounded-2xl" />
+        <Skeleton className="h-28 w-full !rounded-2xl" />
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-2xl px-4 py-8">
-          <button
-            onClick={() => navigate("/orders")}
-            className="mb-6 flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900"
-          >
-            <BiArrowBack className="h-4 w-4" /> Back to Orders
-          </button>
-          <p className="text-sm text-slate-500">Order not found.</p>
-        </div>
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <button
+          onClick={() => navigate("/orders")}
+          className="btn-ghost mb-6 !px-3 !py-1.5 !text-xs"
+        >
+          <BiArrowBack className="h-4 w-4" /> Back to orders
+        </button>
+        <EmptyState
+          icon={<TomatoMark size={48} />}
+          title="Order not found"
+          body="This order may have been removed or the link is wrong."
+        />
       </div>
     );
   }
@@ -199,72 +202,80 @@ export default function OrderPage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-        {/* Back */}
-        <button
-          onClick={() => navigate("/orders")}
-          className="flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-900"
-        >
-          <BiArrowBack className="h-4 w-4" /> Back to Orders
-        </button>
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <button
+        onClick={() => navigate("/orders")}
+        className="btn-ghost mb-5 !px-3 !py-1.5 !text-xs"
+      >
+        <BiArrowBack className="h-4 w-4" /> Back to orders
+      </button>
 
-        {/* Header */}
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm">
+      <div className="space-y-4">
+        {/* Status header */}
+        <div className="card px-4 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-base font-bold text-slate-900">
+              <p className="font-display truncate text-lg font-bold">
                 {order.restaurantName}
               </p>
-              <p className="font-mono text-xs text-slate-400">{order._id}</p>
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="truncate font-mono text-[10px] text-smoke">
+                #{order._id}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-smoke">
                 {formatOrderDateTime(order.createdAt)}
               </p>
             </div>
-            <span
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}
-            >
+            <span className={`chip shrink-0 ${statusClass}`}>
               {getOrderStatusLabel(order.status)}
             </span>
           </div>
           {active && <ProgressBar status={order.status} />}
+          {order.riderName && active && (
+            <p className="mt-3 flex items-center gap-1.5 rounded-lg border-2 border-ink bg-mint px-3 py-2 text-xs font-bold">
+              <BiPhone className="h-3.5 w-3.5" />
+              {order.riderName}
+              {order.riderPhone ? ` · ${order.riderPhone}` : ""} is on it
+            </p>
+          )}
         </div>
 
         {/* Items + pricing */}
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <p className="mb-3 text-sm font-semibold text-slate-900">Items</p>
+        <div className="card px-4 py-4">
+          <p className="font-display mb-3 text-sm font-bold tracking-wide uppercase">
+            Items
+          </p>
           <ul className="space-y-2">
             {order.items.map((item, i) => (
               <li key={i} className="flex justify-between text-sm">
-                <span className="text-slate-700">
+                <span className="font-medium">
                   {item.name}
-                  <span className="ml-1 text-xs text-slate-400">
+                  <span className="ml-1 text-xs font-bold text-smoke">
                     × {item.quantity}
                   </span>
                 </span>
-                <span className="text-slate-500">
+                <span className="font-bold text-smoke">
                   {formatOrderPrice(item.price * item.quantity)}
                 </span>
               </li>
             ))}
           </ul>
 
-          <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-100 pt-3">
-            <div className="flex justify-between text-sm text-slate-500">
+          <div className="mt-4 space-y-1.5 border-t-2 border-dashed border-mist pt-3">
+            <div className="flex justify-between text-sm font-medium text-smoke">
               <span>Subtotal</span>
               <span>{formatOrderPrice(order.subTotal)}</span>
             </div>
-            <div className="flex justify-between text-sm text-slate-500">
+            <div className="flex justify-between text-sm font-medium text-smoke">
               <span>Delivery fee</span>
               <span>{formatOrderPrice(order.deliveryFee)}</span>
             </div>
-            <div className="flex justify-between text-sm text-slate-500">
+            <div className="flex justify-between text-sm font-medium text-smoke">
               <span>Platform fee</span>
               <span>{formatOrderPrice(order.platformFee)}</span>
             </div>
-            <div className="flex justify-between border-t border-slate-100 pt-2 text-sm font-bold">
-              <span className="text-slate-900">Total</span>
-              <span style={{ color: TOMATO }}>
+            <div className="flex justify-between border-t-2 border-ink pt-2 text-sm font-extrabold">
+              <span>Total</span>
+              <span className="text-tomato">
                 {formatOrderPrice(order.totalAmount)}
               </span>
             </div>
@@ -272,38 +283,37 @@ export default function OrderPage() {
         </div>
 
         {/* Delivery address */}
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <p className="mb-2 text-sm font-semibold text-slate-900">
-            Delivery Address
+        <div className="card px-4 py-4">
+          <p className="font-display mb-2 text-sm font-bold tracking-wide uppercase">
+            Delivering to
           </p>
-          <p className="flex items-start gap-1.5 text-sm text-slate-600">
-            <BiMapPin
-              className="mt-0.5 h-4 w-4 shrink-0"
-              style={{ color: TOMATO }}
-            />
+          <p className="flex items-start gap-1.5 text-sm font-medium">
+            <BiMapPin className="mt-0.5 h-4 w-4 shrink-0 text-tomato" />
             {order.deliveryAddress.formattedAddress}
           </p>
           {order.deliveryAddress.mobile && (
-            <p className="mt-1 pl-5 text-xs text-slate-400">
+            <p className="mt-1 pl-5.5 text-xs font-medium text-smoke">
               Mobile: {order.deliveryAddress.mobile}
             </p>
           )}
         </div>
 
         {/* Payment */}
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <p className="mb-2 text-sm font-semibold text-slate-900">Payment</p>
+        <div className="card px-4 py-4">
+          <p className="font-display mb-2 text-sm font-bold tracking-wide uppercase">
+            Payment
+          </p>
           <div className="flex items-center justify-between">
-            <span className="text-sm capitalize text-slate-600">
+            <span className="text-sm font-bold capitalize">
               {order.paymentMethod}
             </span>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              className={`chip ${
                 order.paymentStatus === "paid"
-                  ? "bg-green-100 text-green-700"
+                  ? "bg-mint"
                   : order.paymentStatus === "failed"
-                    ? "bg-red-100 text-red-600"
-                    : "bg-amber-100 text-amber-700"
+                    ? "bg-blush"
+                    : "bg-butter"
               }`}
             >
               {order.paymentStatus.charAt(0).toUpperCase() +
@@ -312,6 +322,7 @@ export default function OrderPage() {
           </div>
         </div>
       </div>
+
       {(order.status === "rider_assigned" || order.status === "picked_up") && (
         <UserOrderMap
           riderLocation={riderLocation}

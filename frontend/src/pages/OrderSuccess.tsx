@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { utilsService } from "../config";
 import { useAppContext } from "../context/AppContext";
-
-const TOMATO_COLOR = "#E23744";
+import { Spinner } from "../components/ui/primitives";
+import { Burger } from "../components/ui/illustrations";
 
 type Status = "loading" | "success" | "failed";
 
@@ -45,59 +45,59 @@ export default function OrderSuccess() {
   }, []);
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-sm p-8 text-center space-y-4">
+    <div className="flex min-h-[70vh] items-center justify-center px-4 py-10">
+      <div className="card animate-pop-in w-full max-w-md space-y-4 p-8 text-center">
         {status === "loading" && (
           <>
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-50">
-              <svg
-                className="animate-spin"
-                width="36"
-                height="36"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={TOMATO_COLOR}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-              </svg>
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-ink bg-butter shadow-pop-sm">
+              <Spinner size={34} />
             </div>
-            <p className="text-gray-500 text-sm">Verifying your payment…</p>
+            <p className="text-sm font-bold text-smoke">
+              Verifying your payment…
+            </p>
           </>
         )}
 
         {status === "success" && (
           <>
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-ink bg-mint shadow-pop-sm">
               <svg
-                width="36"
-                height="36"
+                width="38"
+                height="38"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#16a34a"
-                strokeWidth="2.5"
+                stroke="#1E9E62"
+                strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                aria-hidden="true"
               >
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Order Placed!
+              <h1 className="font-display text-2xl font-extrabold tracking-tight">
+                Order placed!
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Your payment was successful and your order is being prepared.
+              <p className="mt-1.5 text-sm font-medium text-smoke">
+                Payment confirmed — the kitchen is on it.
               </p>
             </div>
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex justify-center">
+              <Burger size={72} className="animate-floaty" />
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={() => navigate("/orders")}
+                className="btn-primary w-full !py-3"
+              >
+                Track my order
+              </button>
               <button
                 onClick={() => navigate("/")}
-                className="w-full rounded-lg px-4 py-2.5 font-semibold text-white transition"
-                style={{ backgroundColor: TOMATO_COLOR }}
+                className="btn-secondary w-full !py-3"
               >
-                Order More
+                Order more
               </button>
             </div>
           </>
@@ -105,42 +105,43 @@ export default function OrderSuccess() {
 
         {status === "failed" && (
           <>
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-ink bg-blush shadow-pop-sm">
               <svg
                 width="36"
                 height="36"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={TOMATO_COLOR}
-                strokeWidth="2.5"
+                stroke="#E23744"
+                strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                aria-hidden="true"
               >
                 <circle cx="12" cy="12" r="10" />
                 <path d="M15 9l-6 6M9 9l6 6" />
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Payment Failed
+              <h1 className="font-display text-2xl font-extrabold tracking-tight">
+                Payment failed
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {errorMsg || "We could not verify your payment. Please try again."}
+              <p className="mt-1.5 text-sm font-medium text-smoke">
+                {errorMsg ||
+                  "We could not verify your payment. Please try again."}
               </p>
             </div>
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-1">
               <button
                 onClick={() => navigate("/checkout")}
-                className="w-full rounded-lg px-4 py-2.5 font-semibold text-white transition"
-                style={{ backgroundColor: TOMATO_COLOR }}
+                className="btn-primary w-full !py-3"
               >
-                Try Again
+                Try again
               </button>
               <button
                 onClick={() => navigate("/")}
-                className="w-full rounded-lg px-4 py-2.5 font-semibold transition border border-gray-200 text-gray-600"
+                className="btn-secondary w-full !py-3"
               >
-                Go Home
+                Go home
               </button>
             </div>
           </>

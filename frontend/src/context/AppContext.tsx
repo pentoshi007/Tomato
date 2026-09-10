@@ -47,15 +47,43 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     fetchUser();
   }, []);
 
-  useEffect(() => {
+  const requestLocation = () => {
+    // Optional dev/QA override — bypasses the browser geolocation prompt.
+    const mock = import.meta.env.VITE_MOCK_LOCATION as string | undefined;
+    if (mock) {
+      const [lat, lng] = mock.split(",").map(Number);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setLoadingLocation(true);
+        axios
+          .get(`${utilsService}/api/geocode/reverse`, {
+            params: { lat, lon: lng },
+          })
+          .then(({ data }) => {
+            setLocation({
+              latitude: lat,
+              longitude: lng,
+              formattedAddress: data.display_name || "Unknown Location",
+            });
+            setCity(
+              data.address?.city ||
+                data.address?.town ||
+                data.address?.village ||
+                "Unknown City",
+            );
+          })
+          .catch(() => {
+            setLocation({ latitude: lat, longitude: lng, formattedAddress: "" });
+            setCity("Unknown City");
+          })
+          .finally(() => setLoadingLocation(false));
+        return;
+      }
+    }
+
     if (!navigator.geolocation) {
       toast.error("Please enable location services to continue");
       return;
     }
-    // React Strict Mode runs mount effects twice in development. Avoid
-    // requesting the same location and geocoding it twice.
-    if (locationRequestStartedRef.current) return;
-    locationRequestStartedRef.current = true;
     setLoadingLocation(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -90,6 +118,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setLoadingLocation(false);
       },
     );
+  };
+
+  useEffect(() => {
+    // React Strict Mode runs mount effects twice in development. Avoid
+    // requesting the same location and geocoding it twice.
+    if (locationRequestStartedRef.current) return;
+    locationRequestStartedRef.current = true;
+    requestLocation();
   }, []);
 
   const fetchMyCart = async () => {
@@ -129,6 +165,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         location,
         loadingLocation,
         city,
+        retryLocation: requestLocation,
         cart,
         subTotal,
         quantity,

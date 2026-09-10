@@ -10,12 +10,21 @@ import MenuItems from "../components/MenuItems";
 import AddMenuItem from "../components/AddMenuItem";
 import type { IMenuItem } from "../types";
 import RestaurantOrders from "../components/RestaurantOrders.tsx";
+import { Logo } from "../components/ui/Logo";
+import { PageLoader } from "../components/ui/primitives";
+
+const TABS: { key: SellerTabs; label: string }[] = [
+  { key: "menu", label: "Menu" },
+  { key: "add-items", label: "Add dish" },
+];
 
 export const Restaurant = () => {
   const { reconnect } = useSocket();
   const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [tabs, setTabs] = useState<SellerTabs>("menu");
+  const [menuItems, setMenuItems] = useState<IMenuItem[]>([]);
+
   const fetchMyRestaurant = async () => {
     setLoading(true);
     try {
@@ -28,7 +37,6 @@ export const Restaurant = () => {
         },
       );
       setRestaurant(data.restaurant);
-      setLoading(false);
       if (data.token) {
         localStorage.setItem("token", data.token);
         // New token now contains restaurantId — reconnect socket so the seller
@@ -46,11 +54,11 @@ export const Restaurant = () => {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchMyRestaurant();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const [menuItems, setMenuItems] = useState<IMenuItem[]>([]);
 
   const fetchMenuItems = async (restaurantId: string) => {
     try {
@@ -66,8 +74,6 @@ export const Restaurant = () => {
     } catch (error) {
       console.log(error);
       toast.error("Problem in fetching menu items");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -78,66 +84,68 @@ export const Restaurant = () => {
   }, [restaurant]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-gray-500">Loading your restaurant...</p>
-      </div>
-    );
+    return <PageLoader label="Opening your kitchen…" />;
   }
   if (!restaurant) {
     return <AddRestaurant fetchMyRestaurant={fetchMyRestaurant} />;
   }
-  return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6 space-y-6">
-      <RestaurantProfile
-        restaurant={restaurant}
-        isSeller={true}
-        onUpdate={setRestaurant}
-      />
-      <RestaurantOrders
-        restaurantId={restaurant._id}
-        soundEnabled={restaurant.soundEnabled}
-        onSoundEnabledChange={(enabled) =>
-          setRestaurant((current) =>
-            current ? { ...current, soundEnabled: enabled } : current,
-          )
-        }
-      />
-      <div className="rounded-xl bg-white shadow-sm">
-        <div className="flex border-b justify-around">
-          {[
-            { key: "menu", label: "Menu Items" },
-            { key: "add-items", label: "Add Item" },
-            { key: "sales", label: "Sales" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTabs(t.key as SellerTabs)}
-              className={`px-4 py-2 text-sm font-medium ${
-                tabs === t.key
-                  ? "border-b-2 border-[#E23774]  text-[#E23774]"
-                  : "text-gray-500 hover:text-[#E23774]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className="p-5 text-center">
-          {tabs === "menu" && (
-            <MenuItems
-              items={menuItems}
-              onItemDeleted={() => fetchMenuItems(restaurant._id)}
-              isSeller={true}
-            />
-          )}
-          {tabs === "add-items" && (
-            <AddMenuItem onItemAdded={() => fetchMenuItems(restaurant._id)} />
-          )}
 
-          {tabs === "sales" && <p className="text-gray-500">No sales found</p>}
+  return (
+    <div className="min-h-screen bg-cream">
+      <header className="sticky top-0 z-40 border-b-2 border-ink bg-cream/95 backdrop-blur-[2px]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Logo size={32} />
+          <span className="chip bg-mustard">Seller kitchen</span>
         </div>
-      </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        <RestaurantProfile
+          restaurant={restaurant}
+          isSeller={true}
+          onUpdate={setRestaurant}
+        />
+
+        <RestaurantOrders
+          restaurantId={restaurant._id}
+          soundEnabled={restaurant.soundEnabled}
+          onSoundEnabledChange={(enabled) =>
+            setRestaurant((current) =>
+              current ? { ...current, soundEnabled: enabled } : current,
+            )
+          }
+        />
+
+        <div className="card overflow-hidden">
+          <div className="flex border-b-2 border-ink">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTabs(t.key)}
+                className={`flex-1 cursor-pointer px-4 py-3.5 text-sm font-black tracking-wide uppercase transition-colors ${
+                  tabs === t.key
+                    ? "bg-tomato text-white"
+                    : "bg-paper text-smoke hover:bg-butter"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="p-5">
+            {tabs === "menu" && (
+              <MenuItems
+                items={menuItems}
+                onItemDeleted={() => fetchMenuItems(restaurant._id)}
+                isSeller={true}
+              />
+            )}
+            {tabs === "add-items" && (
+              <AddMenuItem onItemAdded={() => fetchMenuItems(restaurant._id)} />
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
