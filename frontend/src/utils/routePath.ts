@@ -13,10 +13,23 @@ const segmentKm = (from: LatLng, to: LatLng) => {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a));
 };
 
+export const bearingDeg = (from: LatLng, to: LatLng): number | null => {
+  if (from[0] === to[0] && from[1] === to[1]) return null;
+  const latFrom = toRad(from[0]);
+  const latTo = toRad(to[0]);
+  const dLon = toRad(to[1] - from[1]);
+  const y = Math.sin(dLon) * Math.cos(latTo);
+  const x =
+    Math.cos(latFrom) * Math.sin(latTo) -
+    Math.sin(latFrom) * Math.cos(latTo) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180) / Math.PI;
+};
+
 export type RouteWalker = {
   path: LatLng[];
   totalKm: number;
   pointAt: (fraction: number) => LatLng;
+  remainingPath: (fraction: number) => LatLng[];
   fractionNear: (point: LatLng) => number;
 };
 
@@ -33,22 +46,33 @@ export const createRouteWalker = (path: LatLng[]): RouteWalker | null => {
   }
   const totalKm = cumulative[cumulative.length - 1] ?? 0;
 
-  const pointAt = (fraction: number): LatLng => {
+  const locate = (fraction: number) => {
     const target = Math.min(1, Math.max(0, fraction)) * totalKm;
     let index = 1;
     while (index < cumulative.length - 1 && (cumulative[index] ?? 0) < target) {
       index++;
     }
+    const from = cumulative[index - 1] ?? 0;
+    const to = cumulative[index] ?? 0;
+    const segment = to - from;
+    return { index, ratio: segment > 0 ? (target - from) / segment : 1 };
+  };
+
+  const pointAt = (fraction: number): LatLng => {
+    const { index, ratio } = locate(fraction);
     const from = path[index - 1];
     const to = path[index];
     if (!from || !to) return firstPoint;
-    const segment = (cumulative[index] ?? 0) - (cumulative[index - 1] ?? 0);
-    const ratio =
-      segment > 0 ? (target - (cumulative[index - 1] ?? 0)) / segment : 1;
     return [
       from[0] + (to[0] - from[0]) * ratio,
       from[1] + (to[1] - from[1]) * ratio,
     ];
+  };
+
+  const remainingPath = (fraction: number): LatLng[] => {
+    if (fraction >= 1) return [];
+    const { index } = locate(fraction);
+    return [pointAt(fraction), ...path.slice(index)];
   };
 
   const fractionNear = (point: LatLng): number => {
@@ -67,5 +91,5 @@ export const createRouteWalker = (path: LatLng[]): RouteWalker | null => {
     return (cumulative[bestIndex] ?? 0) / totalKm;
   };
 
-  return { path, totalKm, pointAt, fractionNear };
+  return { path, totalKm, pointAt, remainingPath, fractionNear };
 };

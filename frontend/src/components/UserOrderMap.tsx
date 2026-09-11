@@ -11,7 +11,7 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
-import { createRouteWalker, type LatLng } from "../utils/routePath";
+import { bearingDeg, createRouteWalker, type LatLng } from "../utils/routePath";
 
 const RED_ROUTE_STYLE = { color: "#E23744", weight: 5, opacity: 0.95 };
 
@@ -21,6 +21,20 @@ const riderIcon = L.divIcon({
   iconAnchor: [19, 19],
   className: "rider-map-icon",
 });
+
+const LOOKAHEAD_KM = 0.02;
+
+const riderIconFor = (heading: number | null) => {
+  const facingWest = heading === null || heading <= 0 || heading >= 180;
+  const rotation = heading === null ? 0 : heading - (facingWest ? 270 : 90);
+  const flip = facingWest ? "" : " scaleX(-1)";
+  return L.divIcon({
+    html: `<span style="font-size: 26px; line-height: 38px; display: block; text-align: center; transform: rotate(${rotation}deg)${flip};">🛵</span>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    className: "rider-map-icon",
+  });
+};
 
 const deliveryIcon = L.divIcon({
   html: '<span style="font-size: 26px; line-height: 38px; display: block; text-align: center;">🏠</span>',
@@ -103,6 +117,12 @@ const FitRoute = ({ points }: { points: LatLng[] }) => {
   return null;
 };
 
+type RiderFrame = {
+  point: LatLng;
+  remaining: LatLng[];
+  heading: number | null;
+};
+
 const AnimatedRider = ({
   path,
   startedAt,
@@ -114,10 +134,15 @@ const AnimatedRider = ({
   durationMs: number;
   correction: LatLng | null;
 }) => {
-  const [position, setPosition] = useState<LatLng>(path[0] ?? [0, 0]);
+  const [frame, setFrame] = useState<RiderFrame>({
+    point: path[0] ?? [0, 0],
+    remaining: path,
+    heading: null,
+  });
   const schedule = useRef({ startedAt, durationMs });
   const walker = useMemo(() => createRouteWalker(path), [path]);
   const lastCorrection = useRef<LatLng | null>(null);
+  const lastHeading = useRef<number | null>(null);
 
   useEffect(() => {
     schedule.current = { startedAt, durationMs };
@@ -143,31 +168,48 @@ const AnimatedRider = ({
 
   useEffect(() => {
     if (!walker) return;
-    let frame = 0;
+    let raf = 0;
     let lastDrawn: LatLng | null = null;
     const step = () => {
       const { startedAt: start, durationMs: total } = schedule.current;
       const fraction = Math.min(1, Math.max(0, (Date.now() - start) / total));
       const point = walker.pointAt(fraction);
-      if (
+      const moved =
         !lastDrawn ||
         Math.abs(lastDrawn[0] - point[0]) > 0.00002 ||
-        Math.abs(lastDrawn[1] - point[1]) > 0.00002
-      ) {
+        Math.abs(lastDrawn[1] - point[1]) > 0.00002;
+      if (moved || fraction >= 1) {
         lastDrawn = point;
-        setPosition(point);
+        const lookahead = LOOKAHEAD_KM / Math.max(walker.totalKm, LOOKAHEAD_KM);
+        const bearing = bearingDeg(
+          point,
+          walker.pointAt(Math.min(1, fraction + lookahead)),
+        );
+        if (bearing !== null) lastHeading.current = Math.round(bearing);
+        setFrame({
+          point,
+          remaining: walker.remainingPath(fraction),
+          heading: lastHeading.current,
+        });
       }
-      if (fraction < 1) frame = requestAnimationFrame(step);
+      if (fraction < 1) raf = requestAnimationFrame(step);
     };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
   }, [walker]);
+
+  const icon = useMemo(() => riderIconFor(frame.heading), [frame.heading]);
 
   if (!walker) return null;
   return (
-    <Marker position={position} icon={riderIcon}>
-      <Popup>Your rider is here</Popup>
-    </Marker>
+    <>
+      {frame.remaining.length >= 2 && (
+        <Polyline positions={frame.remaining} pathOptions={RED_ROUTE_STYLE} />
+      )}
+      <Marker position={frame.point} icon={icon}>
+        <Popup>Your rider is here</Popup>
+      </Marker>
+    </>
   );
 };
 
@@ -245,10 +287,6 @@ const UserOrderMap = ({
             </Marker>
             {route ? (
               <>
-                <Polyline
-                  positions={route.path}
-                  pathOptions={RED_ROUTE_STYLE}
-                />
                 {restaurantPosition && (
                   <Marker position={restaurantPosition} icon={restaurantIcon}>
                     <Popup>{restaurantName}</Popup>
