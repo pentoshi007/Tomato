@@ -13,27 +13,27 @@
     },
     "auth": {
       "root": "services/auth/",
-      "entrypoint": "src/index.ts"
+      "entrypoint": "src/index.mts"
     },
     "realtime": {
       "root": "services/realtime/",
-      "entrypoint": "src/index.ts"
+      "entrypoint": "src/index.mts"
     },
     "restaurant": {
       "root": "services/restaurant/",
-      "entrypoint": "src/index.ts"
+      "entrypoint": "src/index.mts"
     },
     "rider": {
       "root": "services/rider/",
-      "entrypoint": "src/index.ts"
+      "entrypoint": "src/index.mts"
     },
     "utils": {
       "root": "services/utils/",
-      "entrypoint": "src/index.ts"
+      "entrypoint": "src/index.mts"
     },
     "admin": {
       "root": "services/admin/",
-      "entrypoint": "src/index.ts"
+      "entrypoint": "src/index.mts"
     }
   },
   "rewrites": [
