@@ -13,27 +13,33 @@
     },
     "auth": {
       "root": "services/auth/",
-      "entrypoint": "src/index.mts"
+      "entrypoint": "Dockerfile",
+      "runtime": "container"
     },
     "realtime": {
       "root": "services/realtime/",
-      "entrypoint": "src/index.mts"
+      "entrypoint": "Dockerfile",
+      "runtime": "container"
     },
     "restaurant": {
       "root": "services/restaurant/",
-      "entrypoint": "src/index.mts"
+      "entrypoint": "Dockerfile",
+      "runtime": "container"
     },
     "rider": {
       "root": "services/rider/",
-      "entrypoint": "src/index.mts"
+      "entrypoint": "Dockerfile",
+      "runtime": "container"
     },
     "utils": {
       "root": "services/utils/",
-      "entrypoint": "src/index.mts"
+      "entrypoint": "Dockerfile",
+      "runtime": "container"
     },
     "admin": {
       "root": "services/admin/",
-      "entrypoint": "src/index.mts"
+      "entrypoint": "Dockerfile",
+      "runtime": "container"
     }
   },
   "rewrites": [

@@ -22,7 +22,7 @@ initSocket(server);
 
 export default server;
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL || process.env.PORT) {
   server.listen(process.env.PORT || 3001, () => {
     console.log(
       `[realtime] server listening on port ${process.env.PORT || 3001}`,

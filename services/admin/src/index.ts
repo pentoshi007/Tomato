@@ -32,6 +32,6 @@ const startServer = async (): Promise<void> => {
 
 export default app;
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL || process.env.PORT) {
   void startServer();
 }
