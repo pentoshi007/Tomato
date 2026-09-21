@@ -12,100 +12,144 @@
       ]
     },
     "auth": {
-      "root": "services/auth/"
+      "root": "services/auth/",
+      "entrypoint": "src/index.ts"
     },
     "realtime": {
-      "root": "services/realtime/"
+      "root": "services/realtime/",
+      "entrypoint": "src/index.ts"
     },
     "restaurant": {
-      "root": "services/restaurant/"
+      "root": "services/restaurant/",
+      "entrypoint": "src/index.ts"
     },
     "rider": {
-      "root": "services/rider/"
+      "root": "services/rider/",
+      "entrypoint": "src/index.ts"
     },
     "utils": {
-      "root": "services/utils/"
+      "root": "services/utils/",
+      "entrypoint": "src/index.ts"
     },
     "admin": {
-      "root": "services/admin/"
+      "root": "services/admin/",
+      "entrypoint": "src/index.ts"
     }
   },
   "rewrites": [
     {
       "source": "/socket.io",
-      "destination": { "service": "realtime" }
+      "destination": {
+        "service": "realtime"
+      }
     },
     {
       "source": "/socket.io/:path*",
-      "destination": { "service": "realtime" }
+      "destination": {
+        "service": "realtime"
+      }
     },
     {
       "source": "/api/internal",
-      "destination": { "service": "realtime" }
+      "destination": {
+        "service": "realtime"
+      }
     },
     {
       "source": "/api/internal/:path*",
-      "destination": { "service": "realtime" }
+      "destination": {
+        "service": "realtime"
+      }
     },
     {
       "source": "/api/auth/:path*",
-      "destination": { "service": "auth" }
+      "destination": {
+        "service": "auth"
+      }
     },
     {
       "source": "/api/restaurant/:path*",
-      "destination": { "service": "restaurant" }
+      "destination": {
+        "service": "restaurant"
+      }
     },
     {
       "source": "/api/item/:path*",
-      "destination": { "service": "restaurant" }
+      "destination": {
+        "service": "restaurant"
+      }
     },
     {
       "source": "/api/cart/:path*",
-      "destination": { "service": "restaurant" }
+      "destination": {
+        "service": "restaurant"
+      }
     },
     {
       "source": "/api/address/:path*",
-      "destination": { "service": "restaurant" }
+      "destination": {
+        "service": "restaurant"
+      }
     },
     {
       "source": "/api/order/:path*",
-      "destination": { "service": "restaurant" }
+      "destination": {
+        "service": "restaurant"
+      }
     },
     {
       "source": "/api/rider/:path*",
-      "destination": { "service": "rider" }
+      "destination": {
+        "service": "rider"
+      }
     },
     {
       "source": "/api/payment/:path*",
-      "destination": { "service": "utils" }
+      "destination": {
+        "service": "utils"
+      }
     },
     {
       "source": "/api/geocode/:path*",
-      "destination": { "service": "utils" }
+      "destination": {
+        "service": "utils"
+      }
     },
     {
       "source": "/api/upload",
-      "destination": { "service": "utils" }
+      "destination": {
+        "service": "utils"
+      }
     },
     {
       "source": "/api/upload/:path*",
-      "destination": { "service": "utils" }
+      "destination": {
+        "service": "utils"
+      }
     },
     {
       "source": "/api/v1/internal",
-      "destination": { "service": "realtime" }
+      "destination": {
+        "service": "realtime"
+      }
     },
     {
       "source": "/api/v1/internal/:path*",
-      "destination": { "service": "realtime" }
+      "destination": {
+        "service": "realtime"
+      }
     },
     {
       "source": "/api/v1/:path*",
-      "destination": { "service": "admin" }
+      "destination": {
+        "service": "admin"
+      }
     },
     {
       "source": "/(.*)",
-      "destination": { "service": "frontend" }
+      "destination": {
+        "service": "frontend"
+      }
     }
   ]
 }
