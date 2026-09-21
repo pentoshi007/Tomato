@@ -44,13 +44,7 @@
   },
   "rewrites": [
     {
-      "source": "/socket.io",
-      "destination": {
-        "service": "realtime"
-      }
-    },
-    {
-      "source": "/socket.io/:path*",
+      "source": "/socket.io/(.*)",
       "destination": {
         "service": "realtime"
       }
