@@ -14,9 +14,13 @@ app.get("/", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 
+async function bootstrap() {
+  await connectDB();
+}
+
 async function startServer() {
   try {
-    await connectDB();
+    await bootstrap();
     app.listen(process.env.PORT || 3000, () => {
       console.log(`Auth Server is running on port ${process.env.PORT || 3000}`);
     });
@@ -26,4 +30,10 @@ async function startServer() {
   }
 }
 
-startServer();
+export default app;
+
+if (process.env.VERCEL) {
+  bootstrap().catch((error) => console.log("bootstrap failed", error));
+} else {
+  startServer();
+}

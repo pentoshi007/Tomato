@@ -28,4 +28,4 @@ Required repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (a Docker H
 
 ## Current images
 
-Namespace `aniket00736` on Docker Hub, repositories `tomato-auth`, `tomato-admin`, `tomato-realtime`, `tomato-restaurant`, `tomato-rider`, `tomato-utils` — the names Render services already pull. Images are built for `linux/amd64` (Render's platform). Render services pull these by tag — see [deployment.md](deployment.md).
+Namespace `aniket00736` on Docker Hub, repositories `tomato-auth`, `tomato-admin`, `tomato-realtime`, `tomato-restaurant`, `tomato-rider`, `tomato-utils` — the names the retired Render services pulled. Images are built for `linux/amd64`. Nothing pulls these in production any more; they exist for self-managed runs — see [deployment.md](deployment.md).

@@ -49,7 +49,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const s = io(realtimeService, {
+    const s = io(realtimeService || undefined, {
       auth: { token },
       transports: ["websocket"],
     });

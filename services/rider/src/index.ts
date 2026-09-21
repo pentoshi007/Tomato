@@ -16,11 +16,15 @@ app.get("/", (_req, res) => {
 
 app.use("/api/rider", riderRoutes);
 
+async function bootstrap() {
+  await connectDB();
+  await connectToRabbitMQ();
+  await startOrderReadyConsumer();
+}
+
 async function startServer() {
   try {
-    await connectDB();
-    await connectToRabbitMQ();
-    await startOrderReadyConsumer();
+    await bootstrap();
     app.listen(process.env.PORT || 3003, () => {
       console.log(
         `Rider Server is running on port ${process.env.PORT || 3003}`,
@@ -32,4 +36,10 @@ async function startServer() {
   }
 }
 
-startServer();
+export default app;
+
+if (process.env.VERCEL) {
+  bootstrap().catch((error) => console.log("bootstrap failed", error));
+} else {
+  void startServer();
+}

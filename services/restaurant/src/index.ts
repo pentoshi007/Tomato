@@ -24,14 +24,18 @@ app.use("/api/item", itemRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/order", orderRoutes);
+async function bootstrap() {
+  await connectDB();
+  await connectToRabbitMQ();
+  await consumePaymentEvents();
+  await resumeDemoKitchens().catch((error) =>
+    console.log("demo kitchen resume failed", error),
+  );
+}
+
 async function startServer() {
   try {
-    await connectDB();
-    await connectToRabbitMQ();
-    await consumePaymentEvents();
-    await resumeDemoKitchens().catch((error) =>
-      console.log("demo kitchen resume failed", error),
-    );
+    await bootstrap();
     app.listen(process.env.PORT || 3002, () => {
       console.log(
         `Restaurant service is running on port ${process.env.PORT || 3002}`,
@@ -43,4 +47,10 @@ async function startServer() {
   }
 }
 
-startServer();
+export default app;
+
+if (process.env.VERCEL) {
+  bootstrap().catch((error) => console.log("bootstrap failed", error));
+} else {
+  void startServer();
+}

@@ -39,16 +39,23 @@ The frontend demo layer (`frontend/src/demo/`) is a separate provider layer over
 
 ## Environment variables
 
-| Service | Variables |
-| --- | --- |
-| auth | `PORT`, `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_URL` |
-| realtime | `PORT`, `INTERNAL_SERVICE_KEY` |
-| restaurant | `PORT`, `MONGO_URI`, `JWT_SECRET`, `RABBITMQ_URL`, `PAYMENT_QUEUE`, `ORDER_READY_QUEUE`, `INTERNAL_SERVICE_KEY`, `REALTIME_SERVICE_URL`, `RIDER_SERVICE_URL` **(new)**, `UTILS_SERVICE` |
-| rider | `PORT`, `MONGO_URI`, `RABBITMQ_URL`, `ORDER_READY_QUEUE`, `RIDER_QUEUE`, `INTERNAL_SERVICE_KEY`, `REALTIME_SERVICE_URL`, `RESTAURANT_SERVICE` |
-| utils | `PORT`, `RABBITMQ_URL`, `PAYMENT_QUEUE`, `RESTAURANT_SERVICE_URL`, `INTERNAL_SERVICE_KEY`, `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_API_SECRET`, `STRIPE_SECRET_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NOMINATIM_URL`, `NOMINATIM_EMAIL`, `NOMINATIM_USER_AGENT` |
-| admin | `PORT`, `MONGO_URI`, `DB_NAME` (set to `Tomato`) |
+One Vercel project hosts all seven members on one origin, so set every value there (**Settings → Environment Variables**). `PORT` and `VERCEL` are platform-provided.
 
-Queue values in use: `PAYMENT_QUEUE=payment_event`, `ORDER_READY_QUEUE=order_ready_event`, `RIDER_QUEUE=rider_event`. `INTERNAL_SERVICE_KEY` must be identical on restaurant, rider, realtime and utils. auth, restaurant and rider hardcode `dbName: "Tomato"`; admin reads it from `DB_NAME`.
+| Member | Variables |
+| --- | --- |
+| frontend | `VITE_AUTH_SERVICE_URL`, `VITE_RESTAURANT_SERVICE_URL`, `VITE_UTILS_SERVICE_URL`, `VITE_RIDER_SERVICE_URL`, `VITE_ADMIN_SERVICE_URL`, `VITE_REALTIME_SERVICE_URL` — all **empty** (same origin), plus `VITE_GOOGLE_CLIENT_ID`, `VITE_INTERNAL_SERVICE_KEY` and the Leaflet/OSM map variables |
+| auth | `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| realtime | `INTERNAL_SERVICE_KEY`, `JWT_SECRET` |
+| restaurant | `MONGO_URI`, `JWT_SECRET`, `INTERNAL_SERVICE_KEY`, `RABBITMQ_URL`, `PAYMENT_QUEUE`, `RIDER_QUEUE`, `ORDER_READY_QUEUE`, `REALTIME_SERVICE_URL`, `RIDER_SERVICE_URL`, `UTILS_SERVICE`, `OVERPASS_URL` |
+| rider | `MONGO_URI`, `JWT_SECRET`, `INTERNAL_SERVICE_KEY`, `RABBITMQ_URL`, `ORDER_READY_QUEUE`, `RIDER_QUEUE`, `REALTIME_SERVICE_URL`, `RESTAURANT_SERVICE`, `UTILS_SERVICE`, `OSRM_ROUTING_URL` |
+| utils | `RABBITMQ_URL`, `PAYMENT_QUEUE`, `RESTAURANT_SERVICE_URL`, `INTERNAL_SERVICE_KEY`, `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_API_SECRET`, `STRIPE_SECRET_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NOMINATIM_URL`, `NOMINATIM_EMAIL`, `NOMINATIM_USER_AGENT`, `FRONTEND_URL` |
+| admin | `MONGO_URI`, `JWT_SECRET`, `DB_NAME` (set to `Tomato`) |
+
+Queue values in use: `PAYMENT_QUEUE=payment_event`, `ORDER_READY_QUEUE=order_ready_event`, `RIDER_QUEUE=rider_event`. `INTERNAL_SERVICE_KEY` must be identical on restaurant, rider, realtime and utils; `JWT_SECRET` identical on auth, restaurant, rider and realtime. auth, restaurant and rider hardcode `dbName: "Tomato"`; admin reads it from `DB_NAME`.
+
+The five cross-service URLs (`REALTIME_SERVICE_URL`, `RIDER_SERVICE_URL`, `RESTAURANT_SERVICE`, `RESTAURANT_SERVICE_URL`, `UTILS_SERVICE`) and `FRONTEND_URL` all take the deployment's own domain — members are not individually public. Leaving `RIDER_SERVICE_URL` unset is not fatal: the rider service backfills cluster riders from the first `ORDER_READY_FOR_RIDER` event instead.
+
+`utils`, `rider` and `restaurant` connect to RabbitMQ at module load and call `process.exit(1)` when it fails, so a missing `RABBITMQ_URL` (or `PAYMENT_QUEUE`) fails every request of that member; auth, restaurant, rider and admin exit on a failed Mongo connection for the same reason.
 
 ## Docker images
 
@@ -66,16 +73,21 @@ DOCKER_USER=<user> DOCKERHUB_TOKEN=<token> ./scripts/docker-build-all.sh --push
 
 CI (`.github/workflows/docker.yml`) runs on every push to `main`: it path-filters `services/<name>/**`, builds and pushes only the changed services with GitHub Actions cache (`type=gha`), tagged with the short SHA and `latest`. A manual `workflow_dispatch` run builds all six. Required repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
 
-## Render redeploy checklist
+## Vercel deployment and redeploy checklist
 
 Complete reference: [docs/deployment.md](docs/deployment.md). Summary:
 
-1. Push to `main` (or run the workflow manually) so the images land on Docker Hub.
-2. On Render, redeploy each service manually — the new images are pulled by tag (`:latest` or the pinned short SHA).
-3. **Add `RIDER_SERVICE_URL` to the restaurant service** on Render, pointing at the rider service's Render URL. Recommended for prompt rider seeding; if it's missing or the rider service is cold, the rider service backfills cluster riders on the first demo `ORDER_READY_FOR_RIDER` event, so demo orders still complete.
-4. Verify `INTERNAL_SERVICE_KEY` is identical on restaurant, rider, realtime and utils — the rider-seed endpoint and all internal emit/status calls are gated on it.
-5. All six services now answer `GET /` with `ok` — usable as a Render health check path.
-6. No changes to MongoDB Atlas, RabbitMQ, Stripe or Razorpay configuration.
+One project, seven members in the root `vercel.json`: `frontend`, `auth`, `realtime`, `restaurant`, `rider`, `utils`, `admin`. Each backend exports its app (realtime exports the HTTP server) as the default export from `src/index.ts`, and the root rewrites are the only public routing: `/socket.io` and `/api/internal|v1/internal` → realtime, `/api/auth` → auth, `/api/restaurant|item|cart|address|order` → restaurant, `/api/rider` → rider, `/api/payment|geocode|upload` → utils, `/api/v1` → admin, everything else → the SPA. A rewrite keeps the original path, so no prefix is stripped and no service or call site changed.
+
+1. Push to `main`; Vercel builds and deploys the whole project (no Docker Hub step).
+2. Set the environment variables listed above, including the six empty `VITE_*_SERVICE_URL` values — they are baked in at build time, so a value change needs a redeploy, not just a restart.
+3. Delete the old frontend-only Vercel project so it cannot serve the stale build on the domain.
+4. Verify `INTERNAL_SERVICE_KEY` on realtime/restaurant/rider/utils and `JWT_SECRET` on auth/restaurant/rider/realtime are identical, and that the cross-service URLs point at the deployment's own domain.
+5. Health check: every member answers `GET /` with `ok`.
+6. Smoke test after deploy: a deep link renders the SPA, `GET /socket.io/?EIO=4&transport=polling` returns a Socket.IO handshake (not the SPA HTML), an un-keyed `/api/v1/internal/emit` returns 403, and a demo order streams kitchen and delivery updates to the UI.
+7. No changes to MongoDB Atlas, RabbitMQ, Stripe or Razorpay configuration.
+
+A WebSocket connection is closed at the maximum function duration (300 s on Hobby), so Socket.IO reconnects periodically instead of holding one connection open indefinitely.
 
 ## Local development
 

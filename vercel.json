@@ -1,0 +1,111 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "framework": "vite",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "auth": {
+      "root": "services/auth/"
+    },
+    "realtime": {
+      "root": "services/realtime/"
+    },
+    "restaurant": {
+      "root": "services/restaurant/"
+    },
+    "rider": {
+      "root": "services/rider/"
+    },
+    "utils": {
+      "root": "services/utils/"
+    },
+    "admin": {
+      "root": "services/admin/"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/socket.io",
+      "destination": { "service": "realtime" }
+    },
+    {
+      "source": "/socket.io/:path*",
+      "destination": { "service": "realtime" }
+    },
+    {
+      "source": "/api/internal",
+      "destination": { "service": "realtime" }
+    },
+    {
+      "source": "/api/internal/:path*",
+      "destination": { "service": "realtime" }
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": { "service": "auth" }
+    },
+    {
+      "source": "/api/restaurant/:path*",
+      "destination": { "service": "restaurant" }
+    },
+    {
+      "source": "/api/item/:path*",
+      "destination": { "service": "restaurant" }
+    },
+    {
+      "source": "/api/cart/:path*",
+      "destination": { "service": "restaurant" }
+    },
+    {
+      "source": "/api/address/:path*",
+      "destination": { "service": "restaurant" }
+    },
+    {
+      "source": "/api/order/:path*",
+      "destination": { "service": "restaurant" }
+    },
+    {
+      "source": "/api/rider/:path*",
+      "destination": { "service": "rider" }
+    },
+    {
+      "source": "/api/payment/:path*",
+      "destination": { "service": "utils" }
+    },
+    {
+      "source": "/api/geocode/:path*",
+      "destination": { "service": "utils" }
+    },
+    {
+      "source": "/api/upload",
+      "destination": { "service": "utils" }
+    },
+    {
+      "source": "/api/upload/:path*",
+      "destination": { "service": "utils" }
+    },
+    {
+      "source": "/api/v1/internal",
+      "destination": { "service": "realtime" }
+    },
+    {
+      "source": "/api/v1/internal/:path*",
+      "destination": { "service": "realtime" }
+    },
+    {
+      "source": "/api/v1/:path*",
+      "destination": { "service": "admin" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
+    }
+  ]
+}

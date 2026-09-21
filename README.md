@@ -47,12 +47,12 @@ Images are tagged `aniket00736/tomato-<service>:<short-sha>` and `:latest`. CI (
 
 ## Deployment
 
-Services run on Render from the Docker Hub images. See [notes.md](notes.md) for the redeploy checklist, including the `RIDER_SERVICE_URL` variable required by the restaurant service.
+All seven members — the SPA and the six Express services — deploy as a **single Vercel project** driven by the root `vercel.json` (`services` model). Each backend exposes itself through the public route prefixes in that file, the SPA keeps its catch-all, and everything shares one domain, so no service URL has to be configured in the frontend. See [docs/deployment.md](docs/deployment.md) for the env matrix, routing table and checklist.
 
 ## Documentation
 
 - [docs/seeding.md](docs/seeding.md) — demo seeding: trigger conditions, cluster identity, catalog, addresses, riders, removal
 - [docs/demo.md](docs/demo.md) — how demo mode works: full order lifecycle, kitchen and delivery automation, rider rotation
 - [docs/docker.md](docs/docker.md) — Docker images, build/push script, CI workflow
-- [docs/deployment.md](docs/deployment.md) — Render deployment, environment variables, infrastructure, redeploy checklist
+- [docs/deployment.md](docs/deployment.md) — Vercel deployment (single project, services model), routing table, environment variables, redeploy checklist
 - [notes.md](notes.md) — engineering-notes digest of the same

@@ -20,8 +20,12 @@ app.use("/api/v1/internal", internalRouter);
 
 initSocket(server);
 
-server.listen(process.env.PORT || 3001, () => {
-  console.log(
-    `[realtime] server listening on port ${process.env.PORT || 3001}`,
-  );
-});
+export default server;
+
+if (!process.env.VERCEL) {
+  server.listen(process.env.PORT || 3001, () => {
+    console.log(
+      `[realtime] server listening on port ${process.env.PORT || 3001}`,
+    );
+  });
+}
