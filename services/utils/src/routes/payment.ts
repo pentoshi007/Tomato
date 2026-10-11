@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isAuth } from "../middlewares/isAuth.js";
 import {
   createRazorpayOrder,
   payWithStripe,
@@ -8,8 +9,8 @@ import {
 
 const router = Router();
 
-router.post("/create", createRazorpayOrder);
-router.post("/verify", verifyRazorpayPayment);
-router.post("/stripe/create", payWithStripe);
-router.get("/stripe/verify", verifyStripePayment);
+router.post("/create", isAuth, createRazorpayOrder);
+router.post("/verify", isAuth, verifyRazorpayPayment);
+router.post("/stripe/create", isAuth, payWithStripe);
+router.get("/stripe/verify", isAuth, verifyStripePayment);
 export default router;

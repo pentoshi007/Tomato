@@ -32,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
     "@types/multer": "^2.1.0",
+    "@types/node": "^25.9.8",
     "concurrently": "^10.0.3",
     "typescript": "^6.0.2"
   }

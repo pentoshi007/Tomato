@@ -104,7 +104,7 @@ VITE_ADMIN_SERVICE_URL=
 VITE_REALTIME_SERVICE_URL=
 ```
 
-`VITE_GOOGLE_CLIENT_ID`, `VITE_INTERNAL_SERVICE_KEY` and the Leaflet/OSM map variables are also read at build time (`frontend/.env.example` lists them all). Do not set a `VITE_REALTIME_SERVICE_URL` to the site URL: the socket client is passed `undefined` when the value is empty, and an explicit empty string is not equivalent. If you ever set it to a real URL, re-verify the socket connection in the browser.
+`VITE_GOOGLE_CLIENT_ID` and the Leaflet/OSM map variables are also read at build time (`frontend/.env.example` lists them all). Never place a secret in a `VITE_*` variable because Vite embeds those values in the public browser bundle. Do not set a `VITE_REALTIME_SERVICE_URL` to the site URL: the socket client is passed `undefined` when the value is empty, and an explicit empty string is not equivalent. If you ever set it to a real URL, re-verify the socket connection in the browser.
 
 ## Deploying
 

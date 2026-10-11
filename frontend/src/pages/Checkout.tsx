@@ -18,10 +18,7 @@ import { Skeleton, EmptyState } from "../components/ui/primitives";
 import { Fries } from "../components/ui/illustrations";
 import { useDemo } from "../demo/useDemo";
 import DemoPaymentSheet from "../demo/DemoPaymentSheet";
-import {
-  clearPaymentConfirming,
-  markPaymentConfirming,
-} from "../utils/paymentConfirmation";
+import { markPaymentConfirming } from "../utils/paymentConfirmation";
 
 const TOMATO_COLOR = "#E23744";
 
@@ -226,21 +223,16 @@ export default function CheckoutPage() {
           razorpay_payment_id: string;
           razorpay_signature: string;
         }) {
-          try {
-            markPaymentConfirming();
-            await axios.post(`${utilsService}/api/payment/verify`, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              orderId,
-            });
-            toast.success("Payment successful");
-            fetchMyCart();
-            navigate("/paymentsuccess/" + response.razorpay_payment_id);
-          } catch {
-            clearPaymentConfirming();
-            toast.error("Payment failed");
-          }
+          markPaymentConfirming();
+          fetchMyCart();
+          navigate("/order-success", {
+            state: { orderId, razorpay: response },
+          });
+        },
+        modal: {
+          ondismiss: () => {
+            toast.error("Payment was cancelled");
+          },
         },
         theme: { color: TOMATO_COLOR },
       };
@@ -529,8 +521,8 @@ export default function CheckoutPage() {
             setDemoSheetOpen(false);
             if (paid && demoPaymentRef.current) {
               toast.success("Payment successful");
-              navigate(`/paymentsuccess/${demoPaymentRef.current.paymentId}`);
               fetchMyCart();
+              navigate(`/orders`);
             }
           }}
         />

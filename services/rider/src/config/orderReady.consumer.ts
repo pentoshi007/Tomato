@@ -186,7 +186,7 @@ const runDemoDelivery = async (
 
   const picked = await callRestaurantService(
     "/api/order/update/status/rider",
-    { orderId },
+    { orderId, riderId: rider._id.toString() },
   ).catch(() => null);
   if (!picked?.success) return;
 
@@ -206,6 +206,7 @@ const runDemoDelivery = async (
   await delay(2_000);
   await callRestaurantService("/api/order/update/status/rider", {
     orderId,
+    riderId: rider._id.toString(),
   }).catch(() => undefined);
   await Rider.updateOne(
     { _id: rider._id },

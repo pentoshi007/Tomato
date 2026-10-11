@@ -23,7 +23,6 @@ const RestaurantPage = lazy(() => import("./pages/RestaurantPage"));
 const Cart = lazy(() => import("./pages/Cart"));
 const AddAddressPage = lazy(() => import("./pages/Address"));
 const CheckoutPage = lazy(() => import("./pages/Checkout"));
-const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 const Orders = lazy(() => import("./pages/Orders"));
 const OrderPage = lazy(() => import("./pages/OrderPage"));
@@ -66,7 +65,7 @@ const CustomerApp = () => (
               <Route path="/order/:orderId" element={<OrderPage />} />
               <Route
                 path="/paymentsuccess/:paymentId"
-                element={<PaymentSuccess />}
+                element={<Navigate to="/orders" replace />}
               />
               <Route
                 path="/paymentsuccess"

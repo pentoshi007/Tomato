@@ -830,6 +830,27 @@ class DemoStore {
       return { data: { order, message: "Order updated" } };
     }
 
+    if (on("POST", "/api/rider/location")) {
+      const order = state.orders.find(
+        (entry) =>
+          entry._id === body.orderId && entry.riderId === state.rider._id,
+      );
+      if (!order) {
+        return { status: 403, data: { message: "Order is not assigned to this rider" } };
+      }
+      const latitude = Number(body.latitude);
+      const longitude = Number(body.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return { status: 400, data: { message: "Invalid coordinates" } };
+      }
+      state.positions[order._id] = [latitude, longitude];
+      demoSocket.dispatch("rider:location", {
+        orderId: order._id,
+        latitude,
+        longitude,
+      });
+      return { data: { success: true } };
+    }
     if (on("GET", "/api/geocode/reverse")) {
       return {
         data: {
@@ -838,10 +859,7 @@ class DemoStore {
         },
       };
     }
-    if (on("POST", "/api/internal/emit")) {
-      return { data: { ok: true } };
-    }
-    if ((params = on("GET", "/api/internal/rider-location/*"))) {
+    if ((params = on("GET", "/api/order/*/rider-location"))) {
       const position = state.positions[params?.[0] ?? ""];
       if (!position) {
         return { status: 404, data: { message: "No cached location" } };

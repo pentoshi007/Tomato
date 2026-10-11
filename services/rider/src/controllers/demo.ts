@@ -1,9 +1,10 @@
 import TryCatch from "../middlewares/trycatch.js";
 import { Rider } from "../model/Rider.js";
 import { ensureDemoRiders } from "../utils/demoRiderSeed.js";
+import { isInternalRequest } from "../utils/internalAuth.js";
 
 export const seedDemoRiders = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
