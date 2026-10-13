@@ -8,6 +8,7 @@ import {
   useRef,
 } from "react";
 import { AuthService, restaurantService, utilsService } from "../config";
+import { UNAUTHORIZED_EVENT } from "../lib/api";
 import { useDemo } from "../demo/useDemo";
 import type { AppContextType, ICart, Location } from "../types";
 import type { User } from "../types";
@@ -73,7 +74,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setUser(null);
         setIsAuth(false);
       }
-      console.log(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -81,6 +82,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   useEffect(() => {
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const endSession = () => {
+      localStorage.removeItem("user");
+      setUser(null);
+      setIsAuth(false);
+    };
+    window.addEventListener(UNAUTHORIZED_EVENT, endSession);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, endSession);
   }, []);
 
   const requestLocation = () => {

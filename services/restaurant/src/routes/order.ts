@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createOrder,
   fetchOrderForPayment,
+  fetchOrderForPaymentVerification,
   fetchRestaurantOrders,
   updateOrderStatus,
   fetchSingleOrder,
@@ -10,6 +11,7 @@ import {
   getCurrentOrdersForRider,
   updateOrderStatusRider,
   fetchPreviousDemoRider,
+  fetchRiderLocationForOrder,
   persistOrderRoute,
 } from "../controllers/order.js";
 import { isAuth, isSeller } from "../middlewares/isAuth.js";
@@ -19,6 +21,12 @@ const router = Router();
 router.post("/new", isAuth, createOrder);
 router.put("/route", persistOrderRoute);
 router.get("/my", isAuth, getMyOrders);
+router.get(
+  "/:orderId/rider-location",
+  isAuth,
+  fetchRiderLocationForOrder,
+);
+router.get("/payment/verify/:orderId", fetchOrderForPaymentVerification);
 router.get("/payment/:orderId", fetchOrderForPayment);
 router.get(
   "/restaurant/:restaurantId",

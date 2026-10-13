@@ -17,6 +17,7 @@ import {
 import { publishEvent } from "../config/order.publisher.js";
 import { startDemoKitchen } from "../config/demoKitchen.js";
 import axios from "axios";
+import { isInternalRequest } from "../utils/internalAuth.js";
 
 // Centralized pricing config (single source of truth for the backend).
 const FREE_DELIVERY_THRESHOLD = 250;
@@ -154,7 +155,7 @@ export const createOrder = TryCatch(
 );
 
 export const fetchOrderForPayment = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
@@ -179,10 +180,29 @@ export const fetchOrderForPayment = TryCatch(async (req, res) => {
   return res.status(200).json({
     success: true,
     orderId: order._id,
+    userId: order.userId,
     message: "Order fetched successfully",
     currency: "INR",
     amount: order.totalAmount,
     expiresAt: order.expiresAt,
+  });
+});
+
+export const fetchOrderForPaymentVerification = TryCatch(async (req, res) => {
+  if (!isInternalRequest(req)) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const { orderId } = req.params;
+  const order = await Order.findById(orderId).select("userId totalAmount").lean();
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+  return res.status(200).json({
+    success: true,
+    orderId: order._id,
+    userId: order.userId,
+    amount: order.totalAmount,
+    currency: "INR",
   });
 });
 
@@ -351,8 +371,54 @@ export const fetchSingleOrder = TryCatch(
   },
 );
 
+export const fetchRiderLocationForOrder = TryCatch(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const orderId = Array.isArray(req.params.orderId)
+      ? req.params.orderId[0]
+      : req.params.orderId;
+    if (!orderId) {
+      return res.status(400).json({ message: "Order ID is required" });
+    }
+    const order = await Order.findOne({ _id: orderId, userId: user._id })
+      .select("_id status")
+      .lean();
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    if (order.status !== "rider_assigned" && order.status !== "picked_up") {
+      return res.status(404).json({ message: "No active rider for this order" });
+    }
+    if (!process.env.INTERNAL_SERVICE_KEY || !process.env.REALTIME_SERVICE_URL) {
+      return res.status(503).json({ message: "Rider location is unavailable" });
+    }
+
+    try {
+      const { data } = await axios.get(
+        `${process.env.REALTIME_SERVICE_URL}/api/internal/rider-location/${orderId}`,
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+          },
+        },
+      );
+      return res.status(200).json(data);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return res
+          .status(404)
+          .json({ message: "No recent rider location for this order" });
+      }
+      return res.status(503).json({ message: "Rider location is unavailable" });
+    }
+  },
+);
+
 export const assignRiderToOrder = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
@@ -369,6 +435,11 @@ export const assignRiderToOrder = TryCatch(async (req, res) => {
     return res
       .status(400)
       .json({ message: "Order already taken by another rider" });
+  }
+  if (order.paymentStatus !== "paid" || order.status !== "ready_for_rider") {
+    return res
+      .status(409)
+      .json({ message: "Order is not ready for rider assignment" });
   }
   const activeDelivery = await Order.findOne({
     riderId,
@@ -467,7 +538,7 @@ const parseRoutePayload = (value: unknown): OrderRoutePayload | null => {
 };
 
 export const persistOrderRoute = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
@@ -498,7 +569,7 @@ export const persistOrderRoute = TryCatch(async (req, res) => {
 });
 
 export const fetchPreviousDemoRider = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
@@ -524,7 +595,7 @@ export const fetchPreviousDemoRider = TryCatch(async (req, res) => {
 });
 
 export const getCurrentOrdersForRider = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
@@ -554,19 +625,26 @@ export const getCurrentOrdersForRider = TryCatch(async (req, res) => {
 });
 
 export const updateOrderStatusRider = TryCatch(async (req, res) => {
-  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+  if (!isInternalRequest(req)) {
     return res
       .status(401)
       .json({ message: "Unauthorized, you are not an internal service" });
   }
-  const { orderId } = req.body;
+  const { orderId, riderId } = req.body as {
+    orderId?: string;
+    riderId?: string;
+  };
 
-  if (!orderId) {
-    return res.status(400).json({ message: "Order ID is required" });
+  if (!orderId || !riderId) {
+    return res
+      .status(400)
+      .json({ message: "Order ID and rider ID are required" });
   }
-  const order = await Order.findById(orderId);
+  const order = await Order.findOne({ _id: orderId, riderId });
   if (!order) {
-    return res.status(404).json({ message: "Order not found" });
+    return res
+      .status(403)
+      .json({ message: "Order is not assigned to this rider" });
   }
   if (order.status == "rider_assigned") {
     order.status = "picked_up";
@@ -642,4 +720,8 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
       message: "Order status updated successfully",
     });
   }
+
+  return res
+    .status(409)
+    .json({ message: "Order status cannot be updated from its current state" });
 });

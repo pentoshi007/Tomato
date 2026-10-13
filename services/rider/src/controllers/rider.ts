@@ -30,6 +30,11 @@ export const addRiderProfile = TryCatch(
       {
         buffer: fileBuffer.content,
       },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+        },
+      },
     );
     const {
       phoneNumber,
@@ -106,6 +111,70 @@ const getActiveOrderForRider = async (riderId: string) => {
     throw error;
   }
 };
+
+export const publishRiderLocation = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (user.role !== "rider") {
+      return res.status(403).json({ message: "Only riders can publish location" });
+    }
+    const { orderId, latitude, longitude } = req.body as {
+      orderId?: unknown;
+      latitude?: unknown;
+      longitude?: unknown;
+    };
+    if (
+      typeof orderId !== "string" ||
+      typeof latitude !== "number" ||
+      typeof longitude !== "number" ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return res
+        .status(400)
+        .json({ message: "A valid orderId, latitude and longitude are required" });
+    }
+
+    const rider = await Rider.findOne({ userId: user._id });
+    if (!rider) {
+      return res.status(404).json({ message: "Rider profile not found" });
+    }
+    const order = await getActiveOrderForRider(rider._id.toString());
+    if (!order || order._id.toString() !== orderId) {
+      return res
+        .status(403)
+        .json({ message: "Order is not assigned to this rider" });
+    }
+    if (!process.env.INTERNAL_SERVICE_KEY || !process.env.REALTIME_SERVICE_URL) {
+      return res.status(503).json({ message: "Location service unavailable" });
+    }
+
+    rider.location = { type: "Point", coordinates: [longitude, latitude] };
+    rider.lastActiveAt = new Date();
+    await rider.save();
+    await axios.post(
+      `${process.env.REALTIME_SERVICE_URL}/api/internal/emit`,
+      {
+        event: "rider:location",
+        room: `user:${order.userId.toString()}`,
+        payload: { orderId, latitude, longitude },
+      },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+        },
+      },
+    );
+    return res.status(200).json({ success: true });
+  },
+);
 
 export const toggleRiderAvailability = TryCatch(
   async (req: AuthenticatedRequest, res) => {

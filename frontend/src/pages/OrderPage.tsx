@@ -2,7 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/useSocket";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { restaurantService, realtimeService } from "../config";
+import { restaurantService } from "../config";
+import { restaurantApi } from "../lib/api";
 import { BiArrowBack, BiMapPin, BiPhone } from "react-icons/bi";
 import type { IOrder, IOrderRoute } from "../types";
 import UserOrderMap, { type LiveRoute } from "../components/UserOrderMap";
@@ -170,12 +171,8 @@ export default function OrderPage() {
     }
 
     let isActive = true;
-    void axios
-      .get(`${realtimeService}/api/internal/rider-location/${orderId}`, {
-        headers: {
-          "x-internal-key": import.meta.env.VITE_INTERNAL_SERVICE_KEY,
-        },
-      })
+    void restaurantApi
+      .get(`/api/order/${orderId}/rider-location`)
       .then(({ data }) => {
         if (
           !isActive ||

@@ -42,6 +42,11 @@ export const addMenuItem = TryCatch(
       {
         buffer: fileBuffer.content,
       },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+        },
+      },
     );
     const item = await MenuItems.create({
       name,

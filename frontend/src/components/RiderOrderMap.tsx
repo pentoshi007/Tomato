@@ -1,4 +1,3 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -12,7 +11,7 @@ import {
   useMap,
 } from "react-leaflet";
 import type { IOrder } from "../types";
-import { realtimeService } from "../config";
+import { riderApi } from "../lib/api";
 
 const riderIcon = L.divIcon({
   html: '<span style="font-size: 26px; line-height: 38px; display: block; text-align: center;">🛵</span>',
@@ -141,24 +140,12 @@ const RiderOrderMap = ({ currentOrder }: Props) => {
             error: null,
           });
 
-          void axios
-            .post(
-              `${realtimeService}/api/internal/emit`,
-              {
-                event: "rider:location",
-                room: `user:${userId}`,
-                payload: {
-                  orderId: currentOrder._id,
-                  latitude: nextLocation[0],
-                  longitude: nextLocation[1],
-                },
-              },
-              {
-                headers: {
-                  "x-internal-key": import.meta.env.VITE_INTERNAL_SERVICE_KEY,
-                },
-              },
-            )
+          void riderApi
+            .post("/api/rider/location", {
+              orderId: currentOrder._id,
+              latitude: nextLocation[0],
+              longitude: nextLocation[1],
+            })
             .catch((error: unknown) => {
               console.error("Unable to share rider location", error);
             });

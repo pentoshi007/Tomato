@@ -52,6 +52,11 @@ export const addRestaurant = TryCatch(
       {
         buffer: fileBuffer.content,
       },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+        },
+      },
     );
 
     const restaurant = await Restaurant.create({
